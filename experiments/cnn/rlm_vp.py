@@ -21,10 +21,34 @@ from tools.mapping_visualization import plot_mapping
 from models import ExpansiveVisualPrompt
 from cfg import *
 
+def get_pruned_model(args):
+
+    pretrained = args.pretrained
+  
+    mask_dir = args.mask_dir
+ 
+    current_mask_weight = torch.load(mask_dir)
+    curr_weight = torch.load(pretrained)
+
+
+    new_weights = {}
+    for name in current_mask_weight.keys():
+        name_ = name.replace("model.","")
+        new_weights[str(name_)] = current_mask_weight[str(name)] * curr_weight[str(name)]
+
+    for k in curr_weight.keys():
+        if str(k) not in new_weights.keys():
+            # print(k)
+            k_ = k.replace("model.","")
+
+            new_weights[k_] = curr_weight[k]
+
+    return new_weights
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--network', choices=["resnet18", "resnet50", "instagram"], required=True)
+    p.add_argument('--network', choices=["LT", "rigL", "acdc", "STR", "dense"], required=True)
     p.add_argument('--seed', type=int, default=7)
     p.add_argument('--dataset', choices=["cifar10", "cifar100", "abide", "dtd", "flowers102", "ucf101", "food101", "gtsrb", "svhn", "eurosat", "oxfordpets", "stanfordcars", "sun397"], required=True)
     p.add_argument('--epoch', type=int, default=200)
@@ -45,15 +69,29 @@ if __name__ == '__main__':
     normalize = transforms.Normalize(IMAGENETNORMALIZE['mean'], IMAGENETNORMALIZE['std'])
 
     # Network
-    if args.network == "resnet18":
-        from torchvision.models import resnet18, ResNet18_Weights
-        network = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1).to(device)
-    elif args.network == "resnet50":
+    if args.network == "dense":
         from torchvision.models import resnet50, ResNet50_Weights
         network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
-    elif args.network == "instagram":
-        from torch import hub
-        network = hub.load('facebookresearch/WSL-Images', 'resnext101_32x8d_wsl').to(device)
+    elif args.network == "LT":
+        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
+        new_dict = get_pruned_model(args)
+        network = network.to(device)
+        network.load_state_dict(new_dict)
+    elif args.network == "rigL":
+        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
+        new_dict = get_pruned_model(args)
+        network = network.to(device)
+        network.load_state_dict(new_dict)
+    elif args.network == "acdc":
+        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
+        new_dict = get_pruned_model(args)
+        network = network.to(device)
+        network.load_state_dict(new_dict)
+    elif args.network == "STR":
+        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
+        new_dict = get_pruned_model(args)
+        network = network.to(device)
+        network.load_state_dict(new_dict)
     else:
         raise NotImplementedError(f"{args.network} is not supported")
     network.requires_grad_(False)
