@@ -6,6 +6,7 @@ from torch.nn import functional as F
 from torch.cuda.amp import autocast, GradScaler
 from torchvision.models import resnet18, ResNet18_Weights
 from torchvision import transforms
+import torchvision
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import argparse
