@@ -13,7 +13,7 @@ sys.path.append(".")
 from data import IMAGENETNORMALIZE, prepare_additive_data
 from tools.misc import gen_folder_name, set_seed
 from cfg import *
-
+from masking_utils import get_wrapped_model
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
@@ -51,6 +51,7 @@ if __name__ == '__main__':
         network = hub.load('facebookresearch/WSL-Images', 'resnext101_32x8d_wsl').to(device)
     else:
         raise NotImplementedError(f"{args.network} is not supported")
+    network = get_wrapped_model(network)
     network.requires_grad_(True)
     network = network.to(device)
 
