@@ -12,7 +12,7 @@ from tqdm import tqdm
 import argparse
 import io
 from PIL import Image
-
+import torch.nn as nn
 import sys
 sys.path.append(".")
 from data import prepare_expansive_data, IMAGENETCLASSES, IMAGENETNORMALIZE
@@ -22,12 +22,36 @@ from tools.mapping_visualization import plot_mapping
 from models import ExpansiveVisualPrompt
 from cfg import *
 
+def check_sparsity(model, conv1=True):
+    
+    sum_list = 0
+    zero_sum = 0
+
+    for name,m in model.named_modules():
+        if isinstance(m, nn.Conv2d):
+            if name == 'conv1':
+                if conv1:
+                    sum_list = sum_list+float(m.weight.nelement())
+                    zero_sum = zero_sum+float(torch.sum(m.weight == 0))    
+                else:
+                    print('skip conv1 for sparsity checking')
+            else:
+                sum_list = sum_list+float(m.weight.nelement())
+                zero_sum = zero_sum+float(torch.sum(m.weight == 0))  
+
+    print('* remain weight = ', 100*(1-zero_sum/sum_list),'%')
+    
+    return 100*(1-zero_sum/sum_list)
+
+
 def get_pruned_model(args):
 
-    pretrained = args.pretrained
+    # pretrained = args.pretrained
   
-    mask_dir = args.mask_dir
- 
+    # mask_dir = args.mask_dir
+    pretrained = f"/home/mila/m/mai-thi.ho/scratch/ImageNetCheckpoint/resnet50_dyn4_9_checkpoint.pth"
+  
+    mask_dir = f"/home/mila/m/mai-thi.ho/scratch/ImageNetCheckpoint/resnet50_dyn4_9_mask.pth"
     current_mask_weight = torch.load(mask_dir)
     curr_weight = torch.load(pretrained)
 
@@ -49,8 +73,8 @@ def get_pruned_model(args):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--network', choices=["LT", "rigL", "acdc", "STR", "dense"], required=True)
-    p.add_argument('--seed', type=int, default=7)
+    p.add_argument('--network', choices=["LT", "rigL", "acdc", "STR", "dense"], default="LT")
+    p.add_argument('--seed', type=int, default=4)
     p.add_argument('--dataset', choices=["cifar10", "cifar100", "abide", "dtd", "flowers102", "ucf101", "food101", "gtsrb", "svhn", "eurosat", "oxfordpets", "stanfordcars", "sun397"], required=True)
     p.add_argument('--epoch', type=int, default=200)
     p.add_argument('--lr', type=float, default=0.01)
@@ -98,6 +122,8 @@ if __name__ == '__main__':
     network.requires_grad_(False)
     network.eval()
 
+
+    check_sparsity(network, False)
     # Visual Prompt
     visual_prompt = ExpansiveVisualPrompt(224, mask=configs['mask'], normalize=normalize).to(device)
 
