@@ -20,7 +20,19 @@ from algorithms import get_dist_matrix, label_mapping_base
 from tools.misc import gen_folder_name, set_seed
 from tools.mapping_visualization import plot_mapping
 from models import ExpansiveVisualPrompt
-from cfg import *
+
+import wandb as wb
+
+
+def wandb_setup(
+    args
+):
+    return wb.init(
+        config =args,
+        project="Reprogram-Sparse",
+        dir="/home/mila/m/mai-thi.ho/scratch/apps",
+        entity="landskape"
+    )
 
 def check_sparsity(model, conv1=True):
     
@@ -78,17 +90,21 @@ if __name__ == '__main__':
     p.add_argument('--dataset', choices=["cifar10", "cifar100", "abide", "dtd", "flowers102", "ucf101", "food101", "gtsrb", "svhn", "eurosat", "oxfordpets", "stanfordcars", "sun397"], required=True)
     p.add_argument('--epoch', type=int, default=200)
     p.add_argument('--lr', type=float, default=0.01)
+    p.add_argument('--results_path',type = str, default = "/home/mila/m/mai-thi.ho/scratch/reprogram_new" )
     args = p.parse_args()
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     set_seed(args.seed)
 
+    wb_logger = wandb_setup(args)
     # Misc
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     set_seed(args.seed)
     exp = f"cnn/rlm_vp"
-    save_path = os.path.join(results_path, exp, gen_folder_name(args))
 
+    
+    save_path = os.path.join(args.results_path, exp, gen_folder_name(args))
+    data_path  =os.path.join(args.results_path,"data")
     # Data
     loaders, configs = prepare_expansive_data(args.dataset, data_path=data_path)
     normalize = transforms.Normalize(IMAGENETNORMALIZE['mean'], IMAGENETNORMALIZE['std'])
@@ -123,7 +139,8 @@ if __name__ == '__main__':
     network.eval()
 
 
-    check_sparsity(network, False)
+    
+    wb_logger.log({"Sparsity":check_sparsity(network, False)})
     # Visual Prompt
     visual_prompt = ExpansiveVisualPrompt(224, mask=configs['mask'], normalize=normalize).to(device)
 
@@ -166,6 +183,8 @@ if __name__ == '__main__':
         scheduler.step()
         logger.add_scalar("train/acc", true_num/total_num, epoch)
         logger.add_scalar("train/loss", loss_sum/total_num, epoch)
+        wb_logger.log({"Train-Loss":loss_sum/total_num})
+        wb_logger.log({"Train-ACC":true_num/total_num})
         
         # Test
         visual_prompt.eval()
@@ -194,7 +213,7 @@ if __name__ == '__main__':
             im = transforms.ToTensor()(Image.open(buf))
         logger.add_image("mapping-matrix", im, epoch)
         logger.add_scalar("test/acc", acc, epoch)
-
+        wb_logger.log({"Test-ACC":acc})
         # Save CKPT
         state_dict = {
             "visual_prompt_dict": visual_prompt.state_dict(),
