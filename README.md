@@ -1,3 +1,9 @@
+# USAGE 
+```
+bash train.sh
+```
+
+
 # ILM
 
 [CVPR23] ["Understanding and Improving Visual Prompting: A Label-Mapping Perspective"](https://arxiv.org/abs/2211.11635)
