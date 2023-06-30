@@ -9,7 +9,6 @@ import torch.utils.data as data
 
 import sys
 sys.path.append(".")
-from cfg import *
 
 
 def loads_data(buf):
