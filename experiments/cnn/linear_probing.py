@@ -4,6 +4,7 @@ import sys
 
 import torch
 import torchvision
+from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
 from torch.utils.tensorboard import SummaryWriter

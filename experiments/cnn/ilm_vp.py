@@ -6,6 +6,7 @@ from functools import partial
 
 import numpy as np
 import torch
+from torch import nn
 import torchvision
 from PIL import Image
 from torch.cuda.amp import GradScaler, autocast
