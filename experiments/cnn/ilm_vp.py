@@ -132,6 +132,9 @@ if __name__ == "__main__":
     p.add_argument("--run_name", type=str, default="exp")
     args = p.parse_args()
 
+    if args.wandb:
+        wb_logger = wandb_setup(args)
+
     # Misc
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     set_seed(args.seed)
