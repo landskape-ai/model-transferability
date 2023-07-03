@@ -11,3 +11,4 @@ lmdb
 scikit-learn
 matplotlib
 git+https://github.com/openai/CLIP.git
+uncertainty-calibration
