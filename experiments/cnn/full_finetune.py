@@ -22,13 +22,9 @@ from tools.misc import gen_folder_name, set_seed
 import wandb as wb
 
 
-def wandb_setup(
-    args
-):
+def wandb_setup(args):
     return wb.init(
-        config =args,
-        project="Reprogram-Sparse",
-        dir="./wandb",
+        config=args, name=args.run_name, project="Reprogram-Sparse", entity="landskape"
     )
 
 def check_sparsity(model, conv1=True):
