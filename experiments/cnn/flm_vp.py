@@ -6,9 +6,9 @@ from functools import partial
 
 import numpy as np
 import torch
-from torch import nn
 import torchvision
 from PIL import Image
+from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
 from torch.utils.tensorboard import SummaryWriter
@@ -27,7 +27,6 @@ from tools.mapping_visualization import plot_mapping
 from tools.misc import gen_folder_name, set_seed
 
 # from cfg import *
-
 
 
 def wandb_setup(args):

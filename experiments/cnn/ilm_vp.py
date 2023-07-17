@@ -6,9 +6,9 @@ from functools import partial
 
 import numpy as np
 import torch
-from torch import nn
 import torchvision
 from PIL import Image
+from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
 from torch.utils.tensorboard import SummaryWriter
@@ -27,7 +27,6 @@ from tools.mapping_visualization import plot_mapping
 from tools.misc import gen_folder_name, set_seed
 
 # from cfg import *
-
 
 
 def wandb_setup(args):
@@ -131,7 +130,7 @@ if __name__ == "__main__":
     p.add_argument("--n_shot", type=float, default=-1.0)
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
-    p.add_argument("--batch_size", type=int, default=4")
+    p.add_argument("--batch_size", type=int, default=128)
     args = p.parse_args()
 
     if args.wandb:

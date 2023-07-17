@@ -22,7 +22,6 @@ from tools.misc import gen_folder_name, set_seed
 # from cfg import *
 
 
-
 def wandb_setup(args):
     return wb.init(
         config=args, name=args.run_name, project="Reprogram-Sparse", entity="landskape"
@@ -123,7 +122,7 @@ if __name__ == "__main__":
     p.add_argument("--n_shot", type=float, default=-1.0)
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
-    p.add_argument("--batch_size", type=int, default=4")
+    p.add_argument("--batch_size", type=int, default=128)
     args = p.parse_args()
 
     if args.wandb:

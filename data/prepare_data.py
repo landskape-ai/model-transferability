@@ -207,6 +207,7 @@ def sample_n_shots(args, train_data):
 
     return subset
 
+
 def get_data_splits(args, train_data):
     # subsetting with train_data_fraction from args
     # uniform between classes
@@ -244,7 +245,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, train=False, download=False, transform=preprocess
         )
         class_names = refine_classnames(test_data.classes)
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -259,7 +260,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, train=False, download=False, transform=preprocess
         )
         class_names = refine_classnames(test_data.classes)
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -274,7 +275,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, split="test", download=False, transform=preprocess
         )
         class_names = [f"{i}" for i in range(10)]
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -294,7 +295,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         )
         test_data = COOPLMDBDataset(root=data_path, split="test", transform=preprocess)
         class_names = refine_classnames(test_data.classes)
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -307,7 +308,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         )
         test_data = COOPLMDBDataset(root=data_path, split="test", transform=preprocess)
         class_names = refine_classnames(test_data.classes)
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -322,7 +323,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, split="test", download=True, transform=preprocess
         )
         class_names = refine_classnames(list(GTSRB_LABEL_MAP.values()))
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -349,7 +350,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = ABIDE(root=data_path, transform=preprocess)
         test_data.data = X_test
         test_data.targets = y_test
-        #train_data = get_data_splits(args, train_data)
+        # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
