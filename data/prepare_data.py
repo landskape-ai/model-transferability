@@ -24,9 +24,15 @@ def sample_n_shots(args, train_data):
         # Find the indices of samples belonging to the current class
         class_indices = np.where(train_data.targets == class_label)[0]
 
+        #shuffle the indices
+        np.random.shuffle(class_indices)
+
         # Sample n_shots samples from the current class
         n_samples = int(args.n_shot)
         sampled_indices.extend(class_indices[:n_samples])
+
+    # shuffle again
+    np.random.shuffle(sampled_indices)
 
     # Create a Subset from the sampled indices
     subset = Subset(train_data, sampled_indices)
