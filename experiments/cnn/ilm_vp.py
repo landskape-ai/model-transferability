@@ -117,7 +117,7 @@ if __name__ == "__main__":
         required=True,
     )
     p.add_argument("--mapping-interval", type=int, default=1)
-    p.add_argument("--epoch", type=int, default=200)
+    p.add_argument("--epoch", type=int, default=100)
     p.add_argument("--lr", type=float, default=0.01)
     p.add_argument("--results_path", type=str, default="/data/jaygala/ILM-VP/results")
     p.add_argument(
