@@ -19,10 +19,10 @@ def sample_n_shots(args, train_data):
     sampled_indices = []
 
     # Iterate over the unique classes in the dataset
-    unique_classes = torch.unique(train_data.targets)
+    unique_classes = np.unique(np.asarray(train_data.targets))
     for class_label in unique_classes:
         # Find the indices of samples belonging to the current class
-        class_indices = torch.where(train_data.targets == class_label)[0]
+        class_indices = np.where(train_data.targets == class_label)[0]
 
         # Sample n_shots samples from the current class
         n_samples = int(args.n_shot)
