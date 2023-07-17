@@ -20,6 +20,8 @@ ulimit -Sn $(ulimit -Hn)
 
 python3 /home/mila/d/diganta.misra/projects/ILM-VP/experiments/cnn/ilm_vp.py \
         --network LT \
+        --n_shot 1 \
+        --batch_size 8 \
         --dataset cifar10 \
         --pretrained_dir /home/mila/d/diganta.misra/scratch/ImageNetCheckpoint \
         --results_path /home/mila/d/diganta.misra/scratch/vp_results \

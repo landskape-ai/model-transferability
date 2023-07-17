@@ -128,8 +128,10 @@ if __name__ == "__main__":
     )
     p.add_argument("--sparsity", type=int, default=9)
     p.add_argument("--train_data_fraction", type=float, default=1.0)
+    p.add_argument("--n_shot", type=float, default=-1.0)
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
+    p.add_argument("--batch_size", type=int, default=4")
     args = p.parse_args()
 
     if args.wandb:

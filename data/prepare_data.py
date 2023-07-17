@@ -188,6 +188,25 @@ def prepare_expansive_data(args, dataset, data_path):
     return loaders, configs
 
 
+def sample_n_shots(args, train_data):
+    # Create an empty list to store the sampled indices
+    sampled_indices = []
+
+    # Iterate over the unique classes in the dataset
+    unique_classes = torch.unique(train_data.targets)
+    for class_label in unique_classes:
+        # Find the indices of samples belonging to the current class
+        class_indices = torch.where(train_data.targets == class_label)[0]
+
+        # Sample n_shots samples from the current class
+        n_samples = int(args.n_shot)
+        sampled_indices.extend(class_indices[:n_samples])
+
+    # Create a Subset from the sampled indices
+    subset = Subset(train_data, sampled_indices)
+
+    return subset
+
 def get_data_splits(args, train_data):
     # subsetting with train_data_fraction from args
     # uniform between classes
@@ -212,7 +231,7 @@ def get_data_splits(args, train_data):
         # make subset
         trainset = Subset(train_data, subsampled_idxs)
 
-    return train_data
+    return trainset
 
 
 def prepare_additive_data(args, dataset, data_path, preprocess):
@@ -225,7 +244,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, train=False, download=False, transform=preprocess
         )
         class_names = refine_classnames(test_data.classes)
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 128, shuffle=True, num_workers=2),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
@@ -238,7 +259,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, train=False, download=False, transform=preprocess
         )
         class_names = refine_classnames(test_data.classes)
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 128, shuffle=True, num_workers=2),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
@@ -251,7 +274,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, split="test", download=False, transform=preprocess
         )
         class_names = [f"{i}" for i in range(10)]
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 128, shuffle=True, num_workers=2),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
@@ -269,7 +294,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         )
         test_data = COOPLMDBDataset(root=data_path, split="test", transform=preprocess)
         class_names = refine_classnames(test_data.classes)
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 128, shuffle=True, num_workers=8),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=8),
@@ -280,7 +307,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         )
         test_data = COOPLMDBDataset(root=data_path, split="test", transform=preprocess)
         class_names = refine_classnames(test_data.classes)
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 64, shuffle=True, num_workers=8),
             "test": DataLoader(test_data, 64, shuffle=False, num_workers=8),
@@ -293,7 +322,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, split="test", download=True, transform=preprocess
         )
         class_names = refine_classnames(list(GTSRB_LABEL_MAP.values()))
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 128, shuffle=True, num_workers=2),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
@@ -318,7 +349,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = ABIDE(root=data_path, transform=preprocess)
         test_data.data = X_test
         test_data.targets = y_test
-        train_data = get_data_splits(args, train_data)
+        #train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(train_data, 64, shuffle=True, num_workers=2),
             "test": DataLoader(test_data, 64, shuffle=False, num_workers=2),

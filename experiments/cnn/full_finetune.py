@@ -103,6 +103,8 @@ if __name__ == "__main__":
     p.add_argument("--pretrained", type=str, default="/ImageNetCheckpoint/resnet50_dyn4_9_checkpoint.pth")
     p.add_argument("--epoch", type=int, default=200)
     p.add_argument("--lr", type=float, default=0.01)
+    p.add_argument("--batch_size", type=int, default=4")
+    p.add_argument("--n_shot", type=float, default=-1.0)
     args = p.parse_args()
 
     wb_logger = wandb_setup(args)
