@@ -20,12 +20,14 @@ def sample_n_shots(args, train_data):
     # Iterate over the unique classes in the dataset
     if args.dataset == 'svhn':
         unique_classes = np.unique(np.asarray(train_data.labels))
-    unique_classes = np.unique(np.asarray(train_data.targets))
+    else:
+        unique_classes = np.unique(np.asarray(train_data.targets))
     for class_label in unique_classes:
         # Find the indices of samples belonging to the current class
         if args.dataset == 'svhn':
             class_indices = np.where(train_data.labels == class_label)[0]
-        class_indices = np.where(train_data.classes == class_label)[0]
+        else:
+            class_indices = np.where(train_data.classes == class_label)[0]
 
         # shuffle the indices
         np.random.shuffle(class_indices)
