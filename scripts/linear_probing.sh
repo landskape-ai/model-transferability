@@ -27,6 +27,5 @@ python3 /home/mila/d/diganta.misra/projects/ILM-VP/experiments/cnn/linear_probin
         --results_path /home/mila/d/diganta.misra/scratch/vp_results \
         --sparsity 9 \
         --seed 1 \
-        --train_data_fraction 0.5 \
         --wandb \
         --run_name linear_probing \
