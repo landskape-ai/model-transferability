@@ -27,7 +27,7 @@ def sample_n_shots(args, train_data):
         if args.dataset == 'svhn':
             class_indices = np.where(train_data.labels == class_label)[0]
         else:
-            class_indices = np.where(train_data.classes == class_label)[0]
+            class_indices = np.where(train_data.targets == class_label)[0]
 
         # shuffle the indices
         np.random.shuffle(class_indices)
