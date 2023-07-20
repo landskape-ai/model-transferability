@@ -13,7 +13,7 @@ from torchvision.models import ResNet18_Weights, resnet18
 from tqdm import tqdm
 
 sys.path.append(".")
-
+import calibration as cal
 import wandb as wb
 
 from data import IMAGENETNORMALIZE, prepare_additive_data
@@ -47,10 +47,16 @@ def check_sparsity(model, conv1=True):
     return 100 * (1 - zero_sum / sum_list)
 
 
-def get_pruned_model(args):
-    pretrained = args.pretrained
 
-    mask_dir = args.mask_dir
+
+def get_pruned_model(args):
+    pretrained = os.path.join(
+        args.pretrained_dir, f"resnet50_dyn4_{args.sparsity}_checkpoint.pth"
+    )
+    mask_dir = os.path.join(
+        args.pretrained_dir, f"resnet50_dyn4_{args.sparsity}_mask.pth"
+    )
+    # -------------------------------------------
 
     current_mask_weight = torch.load(mask_dir)
     curr_weight = torch.load(pretrained)
@@ -98,23 +104,28 @@ if __name__ == "__main__":
         required=True,
     )
     p.add_argument("--results_path", type=str, default="/reprogram_new")
+    # p.add_argument(
+    #     "--mask_dir", type=str, default="/ImageNetCheckpoint/resnet50_dyn4_9_mask.pth"
+    # )
     p.add_argument(
-        "--mask_dir", type=str, default="/ImageNetCheckpoint/resnet50_dyn4_9_mask.pth"
-    )
-    p.add_argument(
-        "--pretrained",
+        "--pretrained_dir",
         type=str,
         default="/ImageNetCheckpoint/resnet50_dyn4_9_checkpoint.pth",
     )
-    p.add_argument("--epoch", type=int, default=200)
+    p.add_argument("--epoch", type=int, default=100)
+    p.add_argument("--sparsity", type=int, default=9)
     p.add_argument("--lr", type=float, default=0.01)
+    p.add_argument("--device_id", type=int, default=1)
     p.add_argument("--batch_size", type=int, default=128)
     p.add_argument("--n_shot", type=float, default=-1.0)
+    p.add_argument("--wandb", action="store_true")
+    p.add_argument("--run_name", type=str, default="exp")
     args = p.parse_args()
 
-    wb_logger = wandb_setup(args)
+    if args.wandb:
+        wb_logger = wandb_setup(args)
 
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    device = "cuda:{}".format(args.device_id) if torch.cuda.is_available() else "cpu"
     set_seed(args.seed)
 
     exp = f"cnn/full_finetuning"
@@ -133,7 +144,7 @@ if __name__ == "__main__":
         ]
     )
     loaders, class_names = prepare_additive_data(
-        args.dataset, data_path=data_path, preprocess=preprocess
+        args, args.dataset, data_path=data_path, preprocess=preprocess
     )
 
     # Network
@@ -142,9 +153,9 @@ if __name__ == "__main__":
 
         network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
     elif args.network == "LT":
-        network = torchvision.models.__dict__["resnet50"](pretrained=(False)).to("cpu")
+        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
         new_dict = get_pruned_model(args)
-        # network = network.to(device)
+        network = network.to(device)
         network.load_state_dict(new_dict)
     elif args.network == "rigL":
         network = torchvision.models.__dict__["resnet50"](pretrained=(False))
@@ -164,14 +175,16 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError(f"{args.network} is not supported")
 
-    mask_dir = args.mask_dir
+    network.requires_grad_(True)
+    network = network.to(device)
+
+    mask_dir = os.path.join(
+        args.pretrained_dir, f"resnet50_dyn4_{args.sparsity}_mask.pth"
+    )
     current_mask_weight = torch.load(mask_dir)
 
-    print("Check Sparsity Before Training : ")
-    check_sparsity(network)
-    network.requires_grad_(True)
-
-    network = network.to(device)
+    if args.wandb:
+        wb_logger.log({"Sparsity": check_sparsity(network, False)})
 
     # Optimizer
     optimizer = torch.optim.Adam(network.parameters(), lr=args.lr, weight_decay=5e-4)
@@ -225,14 +238,21 @@ if __name__ == "__main__":
         scheduler.step()
         logger.add_scalar("train/acc", true_num / total_num, epoch)
         logger.add_scalar("train/loss", loss_sum / total_num, epoch)
-        wb_logger.log({"Train-Loss": loss_sum / total_num})
-        wb_logger.log({"Train-ACC": true_num / total_num})
-        wb_logger.log({"Sparsity": check_sparsity(network, False)})
+        if args.wandb:
+            wb_logger.log(
+                {
+                    "Train/Train-Loss": loss_sum / total_num,
+                    "Train/Train-ACC": true_num / total_num,
+                    "Epoch": epoch,
+                    "LR": scheduler.get_last_lr()[0],
+                }
+            )
 
         # Test
         network.eval()
         total_num = 0
         true_num = 0
+        calibration_error = 0
         pbar = tqdm(
             loaders["test"],
             total=len(loaders["test"]),
@@ -245,10 +265,15 @@ if __name__ == "__main__":
                 fx = network(x)
             total_num += y.size(0)
             true_num += torch.argmax(fx, 1).eq(y).float().sum().item()
+            calibration_error += cal.get_ece(fx.cpu().numpy(), y.cpu().numpy())
             acc = true_num / total_num
             pbar.set_postfix_str(f"Acc {100*acc:.2f}%")
         logger.add_scalar("test/acc", acc, epoch)
-        wb_logger.log({"Test-ACC": acc})
+        if args.wandb:
+            wb_logger.log(
+                {"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num}
+            )
+
         # Save CKPT
         state_dict = {
             "network_dict": network.state_dict(),
