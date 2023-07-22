@@ -86,9 +86,7 @@ def get_pruned_model(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument(
-        "--network", choices=["LT", "dense"], default="LT"
-    )
+    p.add_argument("--network", choices=["LT", "dense"], default="LT")
     p.add_argument("--seed", type=int, default=4)
     p.add_argument(
         "--dataset",
