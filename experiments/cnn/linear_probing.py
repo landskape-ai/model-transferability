@@ -87,7 +87,7 @@ def get_pruned_model(args):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument(
-        "--network", choices=["LT", "rigL", "acdc", "STR", "dense"], default="LT"
+        "--network", choices=["LT", "dense"], default="LT"
     )
     p.add_argument("--seed", type=int, default=4)
     p.add_argument(
@@ -156,21 +156,6 @@ if __name__ == "__main__":
 
         network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
     elif args.network == "LT":
-        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
-        new_dict = get_pruned_model(args)
-        network = network.to(device)
-        network.load_state_dict(new_dict)
-    elif args.network == "rigL":
-        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
-        new_dict = get_pruned_model(args)
-        network = network.to(device)
-        network.load_state_dict(new_dict)
-    elif args.network == "acdc":
-        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
-        new_dict = get_pruned_model(args)
-        network = network.to(device)
-        network.load_state_dict(new_dict)
-    elif args.network == "STR":
         network = torchvision.models.__dict__["resnet50"](pretrained=(False))
         new_dict = get_pruned_model(args)
         network = network.to(device)
