@@ -1,5 +1,6 @@
 import json
 import os
+import ssl
 from collections import OrderedDict
 
 import numpy as np
@@ -7,7 +8,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 from torchvision import datasets, transforms
-import ssl
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 from .abide import ABIDE
@@ -20,18 +21,20 @@ def sample_n_shots(args, train_data):
     sampled_indices = []
 
     # Iterate over the unique classes in the dataset
-    if args.dataset in ['svhn']:
+    if args.dataset in ["svhn"]:
         unique_classes = np.unique(np.asarray(train_data.labels))
-    elif args.dataset in ['gtsrb']:
-        gtsrb_labels = [train_data._samples[i][1] for i in range(len(train_data._samples))]
+    elif args.dataset in ["gtsrb"]:
+        gtsrb_labels = [
+            train_data._samples[i][1] for i in range(len(train_data._samples))
+        ]
         unique_classes = np.unique(np.asarray(gtsrb_labels))
     else:
         unique_classes = np.unique(np.asarray(train_data.targets))
     for class_label in unique_classes:
         # Find the indices of samples belonging to the current class
-        if args.dataset in ['svhn']:
+        if args.dataset in ["svhn"]:
             class_indices = np.where(train_data.labels == class_label)[0]
-        elif args.dataset in ['gtsrb']:
+        elif args.dataset in ["gtsrb"]:
             class_indices = np.where(gtsrb_labels == class_label)[0]
         else:
             class_indices = np.where(train_data.targets == class_label)[0]
