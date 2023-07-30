@@ -1,6 +1,5 @@
 import json
 import os
-import ssl
 from collections import OrderedDict
 
 import numpy as np
@@ -8,7 +7,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 from torchvision import datasets, transforms
-
+import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 from .abide import ABIDE
@@ -24,10 +23,10 @@ def sample_n_shots(args, train_data):
     if args.dataset in ["svhn"]:
         unique_classes = np.unique(np.asarray(train_data.labels))
     elif args.dataset in ["gtsrb"]:
-        gtsrb_labels = [
-            train_data._samples[i][1] for i in range(len(train_data._samples))
-        ]
+        gtsrb_labels = [train_data._samples[i][1] for i in range(len(train_data._samples))]
         unique_classes = np.unique(np.asarray(gtsrb_labels))
+    elif args.dataset in ["dtd", "flowers102"]:
+        unique_classes = np.unique(np.asarray(train_data._labels))
     else:
         unique_classes = np.unique(np.asarray(train_data.targets))
     for class_label in unique_classes:
@@ -36,6 +35,8 @@ def sample_n_shots(args, train_data):
             class_indices = np.where(train_data.labels == class_label)[0]
         elif args.dataset in ["gtsrb"]:
             class_indices = np.where(gtsrb_labels == class_label)[0]
+        elif args.dataset in ["dtd", "flowers102"]:
+            class_indices = np.where(train_data._labels == class_label)[0]
         else:
             class_indices = np.where(train_data.targets == class_label)[0]
 
@@ -109,7 +110,7 @@ def prepare_expansive_data(args, dataset, data_path):
         test_data = datasets.CIFAR10(
             root=data_path, train=False, download=True, transform=preprocess
         )
-        # train_data = get_data_splits(args, train_data)
+        # test_data = get_data_splits(args, test_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -198,6 +199,59 @@ def prepare_expansive_data(args, dataset, data_path):
             "class_names": [f"{i}" for i in range(10)],
             "mask": np.zeros((32, 32)),
         }
+    elif dataset == "dtd":
+        preprocess = transforms.Compose(
+            [
+                transforms.Lambda(lambda x: x.convert("RGB")),
+                transforms.Resize((128, 128)),
+                transforms.ToTensor(),
+            ]
+        )
+        train_data = datasets.DTD(
+            root=data_path, split="train", download=True, transform=preprocess
+        )
+        test_data = datasets.DTD(
+            root=data_path, split="test", download=True, transform=preprocess
+        )
+        # train_data = get_data_splits(args, train_data)
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
+        loaders = {
+            "train": DataLoader(
+                train_data, args.batch_size, shuffle=True, num_workers=2
+            ),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
+        }
+        configs = {
+            "class_names": [f"{i}" for i in range(47)],
+            "mask": np.zeros((128, 128)),
+        }
+    elif dataset == "flowers102":
+        preprocess = transforms.Compose(
+            [
+                transforms.Lambda(lambda x: x.convert("RGB")),
+                transforms.Resize((128, 128)),
+                transforms.ToTensor(),
+            ]
+        )
+        train_data = datasets.Flowers102(
+            root=data_path, split="train", download=True, transform=preprocess
+        )
+        test_data = datasets.Flowers102(
+            root=data_path, split="test", download=True, transform=preprocess
+        )
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
+        loaders = {
+            "train": DataLoader(
+                train_data, args.batch_size, shuffle=True, num_workers=2
+            ),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
+        }
+        configs = {
+            "class_names": [f"{i}" for i in range(102)],
+            "mask": np.zeros((128, 128)),
+        }
     elif dataset == "abide":
         preprocess = transforms.ToTensor()
         D = ABIDE(root=data_path)
@@ -229,7 +283,6 @@ def prepare_expansive_data(args, dataset, data_path):
         "sun397",
         "ucf101",
         "stanfordcars",
-        "flowers102",
     ]:
         preprocess = transforms.Compose(
             [
@@ -255,7 +308,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "class_names": refine_classnames(test_data.classes),
             "mask": np.zeros((128, 128)),
         }
-    elif dataset in ["dtd", "oxfordpets"]:
+    elif dataset in ["oxfordpets"]:
         preprocess = transforms.Compose(
             [
                 transforms.Lambda(lambda x: x.convert("RGB")),
@@ -266,7 +319,8 @@ def prepare_expansive_data(args, dataset, data_path):
         train_data = COOPLMDBDataset(
             root=data_path, split="train", transform=preprocess
         )
-        test_data = COOPLMDBDataset(root=data_path, split="test", transform=preprocess)
+        test_data = COOPLMDBDataset(
+            root=data_path, split="test", transform=preprocess)
         # train_data = get_data_splits(args, train_data)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
@@ -338,13 +392,47 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             ),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
         }
+    elif dataset == "dtd":
+        train_data = datasets.DTD(
+            root=data_path, split="train", download=True, transform=preprocess
+        )
+        test_data = datasets.DTD(
+            root=data_path, split="test", download=True, transform=preprocess
+        )
+        class_names = [f"{i}" for i in range(47)]
+
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
+        loaders = {
+            "train": DataLoader(
+                train_data, args.batch_size, shuffle=True, num_workers=2
+            ),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
+        }
+    elif dataset == "flowers102":
+        train_data = datasets.Flowers102(
+            root=data_path, split="train", download=True, transform=preprocess
+        )
+        test_data = datasets.Flowers102(
+            root=data_path, split="test", download=True, transform=preprocess
+        )
+        # class_names = [f"{i}" for i in range(47)]
+        class_names = [f"{i}" for i in range(102)]
+
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
+        loaders = {
+            "train": DataLoader(
+                train_data, args.batch_size, shuffle=True, num_workers=2
+            ),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
+        }
     elif dataset in [
         "food101",
         "sun397",
         "eurosat",
         "ucf101",
         "stanfordcars",
-        "flowers102",
     ]:
         train_data = COOPLMDBDataset(
             root=data_path, split="train", transform=preprocess
@@ -360,7 +448,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             ),
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=8),
         }
-    elif dataset in ["dtd", "oxfordpets"]:
+    elif dataset in ["oxfordpets"]:
         train_data = COOPLMDBDataset(
             root=data_path, split="train", transform=preprocess
         )
@@ -469,3 +557,4 @@ def prepare_gtsrb_fraction_data(data_path, fraction, preprocess=None):
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
         }
         return loaders, class_names
+
