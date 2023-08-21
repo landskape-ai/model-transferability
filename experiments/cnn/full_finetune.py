@@ -56,7 +56,6 @@ def get_pruned_model(args):
     mask_dir = os.path.join(
         args.pretrained_dir, f"resnet50_dyn4_{args.sparsity}_mask.pth"
     )
-    # -------------------------------------------
 
     current_mask_weight = torch.load(mask_dir)
     curr_weight = torch.load(pretrained)
@@ -70,7 +69,6 @@ def get_pruned_model(args):
 
     for k in curr_weight.keys():
         if str(k) not in new_weights.keys():
-            # print(k)
             k_ = k.replace("model.", "")
 
             new_weights[k_] = curr_weight[k]
@@ -203,14 +201,12 @@ if __name__ == "__main__":
                 fx = network(x)
                 loss = F.cross_entropy(fx, y, reduction="mean")
             scaler.scale(loss).backward()
-
-            # Apply mask to param_data and gradients to preserve pruned connections
+            
             for name, param in network.named_parameters():
                 name = "model." + name
                 if name in current_mask_weight:
                     param.data *= current_mask_weight[name].to(device)
                     param.grad *= current_mask_weight[name].to(device)
-            #  END OF APPLYING MASKS
 
             scaler.step(optimizer)
             scaler.update()
