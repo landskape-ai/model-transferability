@@ -233,7 +233,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
         }
         configs = {
-            "class_names": [f"{i}" for i in range(47)],
+            "class_names": refine_classnames(test_data.classes),
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "flowers102":
@@ -259,7 +259,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
         }
         configs = {
-            "class_names": [f"{i}" for i in range(102)],
+            "class_names": [refine_classnames(test_data.classes),
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "eurosat":
@@ -292,7 +292,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=8),
         }
         configs = {
-            "class_names": [f"{i}" for i in range(10)],
+            "class_names": refine_classnames(test_data.classes),
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "abide":
@@ -344,7 +344,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "test": DataLoader(test_data, 64, shuffle=False, num_workers=2),
         }
         configs = {
-            "class_names": [f"{i}" for i in range(37)],
+            "class_names": refine_classnames(test_data.classes),
             "mask": np.zeros((128, 128)),
         }
     elif dataset in [
@@ -442,7 +442,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = datasets.DTD(
             root=data_path, split="test", download=True, transform=preprocess
         )
-        class_names = [f"{i}" for i in range(47)]
+        class_names = refine_classnames(test_data.classes)
 
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
@@ -459,7 +459,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = datasets.Flowers102(
             root=data_path, split="test", download=True, transform=preprocess
         )
-        class_names = [f"{i}" for i in range(102)]
+        class_names = refine_classnames(test_data.classes)
 
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
@@ -483,7 +483,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data.data = X_test
         test_data.targets = y_test
 
-        class_names = [f"{i}" for i in range(10)]
+        class_names = refine_classnames(test_data.classes)
 
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
@@ -500,7 +500,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = datasets.OxfordIIITPet(
             root=data_path, split="test", download=True, transform=preprocess
         )
-        class_names = [f"{i}" for i in range(37)]
+        class_names = refine_classnames(test_data.classes)
 
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
