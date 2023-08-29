@@ -49,7 +49,7 @@ To run the Linear Probing script to transfer lottery ticket at sparsity state `8
 ```
 python3 experiments/cnn/linear_probing.py \
         --network LT \
-        --sparsity 9 \
+        --sparsity 8 \
         --pretrained_dir pretrained_dir_name \
         --n_shot -1 \
         --batch_size 128 \
@@ -64,7 +64,7 @@ Similarly, to run the ILM-VP script to transfer the dense model onto the full CI
 ```
 python3 experiments/cnn/ilm_vp.py \
         --network LT \
-        --sparsity 9 \
+        --sparsity 8 \
         --pretrained_dir pretrained_dir_name \
         --n_shot -1 \
         --batch_size 128 \
