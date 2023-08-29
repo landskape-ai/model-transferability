@@ -71,3 +71,6 @@ python3 experiments/cnn/ilm_vp.py \
         --dataset cifar10 \
         --results_path results \
 ```
+
+
+**Note:** The ImageNet-1k lottery ticket checkpoints used in this study may be made available upon reasonable request from the authors.
