@@ -14,3 +14,60 @@ In this repository, we provide the code for our Reprogramming Under Constraints 
 
 Run `pip3 install -r requirements.txt`.
 
+## Run the scripts
+
+### Transferring a dense model
+
+To run the Linear Probing script to transfer the dense model onto the full CIFAR-10 dataset with default parameters, use the following command:
+
+```
+python3 experiments/cnn/linear_probing.py \
+        --network dense \
+        --n_shot -1 \
+        --batch_size 128 \
+        --dataset cifar10 \
+        --results_path results \
+```
+
+Note that `n_shot = -1` indicated that the entire data is being used. To use other N-shot data budgets, the user can provide a custon value.
+
+Similarly, to run the ILM-VP script to transfer the dense model onto the full CIFAR-10 dataset with default parameters, use the following command:
+
+```
+python3 experiments/cnn/ilm_vp.py \
+        --network dense \
+        --n_shot -1 \
+        --batch_size 128 \
+        --dataset cifar10 \
+        --results_path results \
+```
+
+### Transferring a Lottery Ticket
+
+To run the Linear Probing script to transfer lottery ticket at sparsity state `8` onto the full CIFAR-10 dataset with default parameters, use the following command:
+
+```
+python3 experiments/cnn/linear_probing.py \
+        --network LT \
+        --sparsity 9 \
+        --pretrained_dir pretrained_dir_name \
+        --n_shot -1 \
+        --batch_size 128 \
+        --dataset cifar10 \
+        --results_path results \
+```
+
+Note that `n_shot = -1` indicated that the entire data is being used. To use other N-shot data budgets, the user can provide a custon value.
+
+Similarly, to run the ILM-VP script to transfer the dense model onto the full CIFAR-10 dataset with default parameters, use the following command:
+
+```
+python3 experiments/cnn/ilm_vp.py \
+        --network LT \
+        --sparsity 9 \
+        --pretrained_dir pretrained_dir_name \
+        --n_shot -1 \
+        --batch_size 128 \
+        --dataset cifar10 \
+        --results_path results \
+```

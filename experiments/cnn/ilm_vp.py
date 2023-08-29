@@ -19,8 +19,11 @@ sys.path.append(".")
 import calibration as cal
 import wandb as wb
 
-from algorithms import (generate_label_mapping_by_frequency, get_dist_matrix,
-                        label_mapping_base)
+from algorithms import (
+    generate_label_mapping_by_frequency,
+    get_dist_matrix,
+    label_mapping_base,
+)
 from data import IMAGENETCLASSES, IMAGENETNORMALIZE, prepare_expansive_data
 from models import ExpansiveVisualPrompt
 from tools.mapping_visualization import plot_mapping
@@ -124,7 +127,6 @@ if __name__ == "__main__":
         default="/data/jaygala/ILM-VP/artifacts/ImageNetCheckpoint_LT",
     )
     p.add_argument("--sparsity", type=int, default=9)
-    p.add_argument("--train_data_fraction", type=float, default=1.0)
     p.add_argument("--n_shot", type=float, default=-1.0)
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
