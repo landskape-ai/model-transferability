@@ -6,3 +6,11 @@ In the era of foundation models with huge pre-training budgets, the downstream t
 
 ![Overview](vp.png)
 
+## What is in this repository?
+
+In this repository, we provide the code for our Reprogramming Under Constraints paper.
+
+## Dependencies
+
+Run `pip3 install -r requirements.txt`.
+
