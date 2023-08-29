@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 from torchvision import datasets, transforms
 import ssl
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 from .abide import ABIDE
@@ -23,12 +24,16 @@ def sample_n_shots(args, train_data):
     if args.dataset in ["svhn"]:
         unique_classes = np.unique(np.asarray(train_data.labels))
     elif args.dataset in ["gtsrb"]:
-        gtsrb_labels = [train_data._samples[i][1] for i in range(len(train_data._samples))]
+        gtsrb_labels = [
+            train_data._samples[i][1] for i in range(len(train_data._samples))
+        ]
         unique_classes = np.unique(np.asarray(gtsrb_labels))
     elif args.dataset in ["dtd", "flowers102", "oxfordpets"]:
         unique_classes = np.unique(np.asarray(train_data._labels))
     elif args.dataset in ["eurosat"]:
-        eurosat_labels = [train_data.samples[i][1] for i in range(len(train_data.samples))]
+        eurosat_labels = [
+            train_data.samples[i][1] for i in range(len(train_data.samples))
+        ]
         unique_classes = np.unique(np.asarray(eurosat_labels))
     else:
         unique_classes = np.unique(np.asarray(train_data.targets))
