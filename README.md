@@ -59,7 +59,7 @@ python3 experiments/cnn/linear_probing.py \
 
 Note that `n_shot = -1` indicated that the entire data is being used. To use other N-shot data budgets, the user can provide a custon value.
 
-Similarly, to run the ILM-VP script to transfer the dense model onto the full CIFAR-10 dataset with default parameters, use the following command:
+Similarly, to run the ILM-VP script to transfer lottery ticket at sparsity state `8` onto the full CIFAR-10 dataset with default parameters, use the following command:
 
 ```
 python3 experiments/cnn/ilm_vp.py \
