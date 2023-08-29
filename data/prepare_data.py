@@ -65,34 +65,6 @@ def sample_n_shots(args, train_data):
 
     return subset
 
-
-def get_data_splits(args, train_data):
-    # subsetting with train_data_fraction from args
-    # uniform between classes
-    if args.train_data_fraction < 1.0:
-        # make map of class and indices of the samples
-        target_to_sample_idxs = [[] for _ in range(len(train_data.classes))]
-        for i, (_, target) in enumerate(train_data):
-            target_to_sample_idxs[target].append(i)
-
-        # shuffle each class
-        for sample_idxs in target_to_sample_idxs:
-            np.random.shuffle(sample_idxs)
-            # only keep fraction
-            sample_idxs[:] = sample_idxs[
-                : int(len(sample_idxs) * args.train_data_fraction)
-            ]
-
-        # concat
-        subsampled_idxs = np.concatenate(target_to_sample_idxs)
-        # shuffle again
-        np.random.shuffle(subsampled_idxs)
-        # make subset
-        trainset = Subset(train_data, subsampled_idxs)
-
-    return trainset
-
-
 def refine_classnames(class_names):
     for i, class_name in enumerate(class_names):
         class_names[i] = class_name.lower().replace("_", " ").replace("-", " ")
@@ -521,7 +493,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         )
         test_data = COOPLMDBDataset(root=data_path, split="test", transform=preprocess)
         class_names = refine_classnames(test_data.classes)
-        # train_data = get_data_splits(args, train_data)
+
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -538,7 +510,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             root=data_path, split="test", download=True, transform=preprocess
         )
         class_names = refine_classnames(list(GTSRB_LABEL_MAP.values()))
-        # train_data = get_data_splits(args, train_data)
+
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -567,7 +539,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = ABIDE(root=data_path, transform=preprocess)
         test_data.data = X_test
         test_data.targets = y_test
-        # train_data = get_data_splits(args, train_data)
+
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
