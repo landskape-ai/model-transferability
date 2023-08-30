@@ -73,4 +73,4 @@ python3 experiments/cnn/ilm_vp.py \
 ```
 
 
-**Note:** The ImageNet-1k lottery ticket checkpoints used in this study may be made available upon reasonable request from the authors.
+**Note:** The ResNet-50 lottery ticket checkpoints pretrained on ImageNet-1k used in this study may be made available upon reasonable request from the authors.
