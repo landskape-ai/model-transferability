@@ -228,10 +228,10 @@ def prepare_expansive_data(args, dataset, data_path):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2)
         }
         configs = {
-            "class_names": [refine_classnames(test_data.classes),
+            "class_names": [refine_classnames(test_data.classes)],
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "eurosat":
