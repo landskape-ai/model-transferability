@@ -1,5 +1,6 @@
 import json
 import os
+import ssl
 from collections import OrderedDict
 
 import numpy as np
@@ -7,7 +8,6 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 from torchvision import datasets, transforms
-import ssl
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -64,6 +64,7 @@ def sample_n_shots(args, train_data):
     subset = Subset(train_data, sampled_indices)
 
     return subset
+
 
 def refine_classnames(class_names):
     for i, class_name in enumerate(class_names):
@@ -228,7 +229,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2)
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
         }
         configs = {
             "class_names": [refine_classnames(test_data.classes)],

@@ -19,11 +19,8 @@ sys.path.append(".")
 import calibration as cal
 import wandb as wb
 
-from algorithms import (
-    generate_label_mapping_by_frequency,
-    get_dist_matrix,
-    label_mapping_base,
-)
+from algorithms import (generate_label_mapping_by_frequency, get_dist_matrix,
+                        label_mapping_base)
 from data import IMAGENETCLASSES, IMAGENETNORMALIZE, prepare_expansive_data
 from models import ExpansiveVisualPrompt
 from tools.mapping_visualization import plot_mapping
