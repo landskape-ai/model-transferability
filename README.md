@@ -1,5 +1,5 @@
 <h1 align="center">Reprogramming Under Constraints</h1>
-<p align="center">Diganta Misra<sup>*,1,2,3</sup>, Agam Goyal<sup>*,4</sup>, Bharat Runwal<sup>*,2</sup>, Pin Yu Chen<sup>5</sup></p>
+<p align="center">Diganta Misra<sup>*,1,2,3</sup>, Agam Goyal<sup>*,4</sup>, Bharat Runwal<sup>*,1,2</sup>, Pin Yu Chen<sup>5</sup></p>
 <p align="center"><sup>1</sup> Mila - Quebec AI Institute,<sup>2</sup> Landskape AI,<sup>3</sup> UdeM,<sup>4</sup> UW-Madison,<sup>5</sup> IBM Research</p>
 <p align="center"><sup>*</sup> Equal Contribution </p>
 <p align="center">
