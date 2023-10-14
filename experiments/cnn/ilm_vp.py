@@ -154,21 +154,21 @@ if __name__ == "__main__":
 
     # Network
     if args.network == "dense":
-        if args.model == "resnet50:
+        if args.model == "resnet50":
             network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
-        elif args.model == "resnet34:
+        elif args.model == "resnet34":
             network = resnet34(weights=ResNet34_Weights.IMAGENET1K_V1).to(device)
-        elif args.model == "resnet18:
+        elif args.model == "resnet18":
             network = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1).to(device)
     elif args.network == "sparsezoo":
-        if args.model == "resnet34:
+        if args.model == "resnet34":
             network = torchvision.models.__dict__["resnet34"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
                 args.pretrained_dir, f"resnet34_checkpoint.pth"
             )
             network = network.to(device)
             network.load_state_dict(checkpoint["state_dict"], strict=False)
-        elif args.model == "resnet18:
+        elif args.model == "resnet18":
             network = torchvision.models.__dict__["resnet18"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
                 args.pretrained_dir, f"resnet18_checkpoint.pth"
