@@ -232,7 +232,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "test": DataLoader(test_data, 128, shuffle=False, num_workers=2),
         }
         configs = {
-            "class_names": [refine_classnames(test_data.classes)],
+            "class_names": [f"{i}" for i in range(102)],
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "eurosat":
@@ -432,7 +432,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         test_data = datasets.Flowers102(
             root=data_path, split="test", download=True, transform=preprocess
         )
-        class_names = refine_classnames(test_data.classes)
+        class_names = [f"{i}" for i in range(102)]
 
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
