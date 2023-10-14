@@ -15,6 +15,10 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 from tqdm import tqdm
 
+from torchvision.models import ResNet18_Weights, resnet18
+from torchvision.models import ResNet34_Weights, resnet34
+from torchvision.models import ResNet50_Weights, resnet50
+
 sys.path.append(".")
 import calibration as cal
 import wandb as wb
@@ -93,7 +97,8 @@ def get_pruned_model(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--network", choices=["LT", "dense"], default="LT")
+    p.add_argument("--model", choices=["resnet18", "resnet34", "resnet50"], default="resnet50")
+    p.add_argument("--network", choices=["sparsezoo", "LT", "dense"], default="LT")
     p.add_argument("--seed", type=int, default=4)
     p.add_argument(
         "--dataset",
@@ -149,9 +154,27 @@ if __name__ == "__main__":
 
     # Network
     if args.network == "dense":
-        from torchvision.models import ResNet50_Weights, resnet50
-
-        network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
+        if args.model == "resnet50:
+            network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
+        elif args.model == "resnet34:
+            network = resnet34(weights=ResNet34_Weights.IMAGENET1K_V1).to(device)
+        elif args.model == "resnet18:
+            network = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1).to(device)
+    elif args.network == "sparsezoo":
+        if args.model == "resnet34:
+            network = torchvision.models.__dict__["resnet34"](pretrained=(False))
+            checkpoint = torch.load(os.path.join(
+                args.pretrained_dir, f"resnet34_checkpoint.pth"
+            )
+            network = network.to(device)
+            network.load_state_dict(checkpoint["state_dict"], strict=False)
+        elif args.model == "resnet18:
+            network = torchvision.models.__dict__["resnet18"](pretrained=(False))
+            checkpoint = torch.load(os.path.join(
+                args.pretrained_dir, f"resnet18_checkpoint.pth"
+            )
+            network = network.to(device)
+            network.load_state_dict(checkpoint["state_dict"], strict=False)
     elif args.network == "LT":
         network = torchvision.models.__dict__["resnet50"](pretrained=(False))
         new_dict = get_pruned_model(args)
