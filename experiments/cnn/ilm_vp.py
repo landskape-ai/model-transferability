@@ -165,14 +165,14 @@ if __name__ == "__main__":
             network = torchvision.models.__dict__["resnet34"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
                 args.pretrained_dir, f"resnet34_checkpoint.pth"
-            )
+            ))
             network = network.to(device)
             network.load_state_dict(checkpoint["state_dict"], strict=False)
         elif args.model == "resnet18":
             network = torchvision.models.__dict__["resnet18"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
                 args.pretrained_dir, f"resnet18_checkpoint.pth"
-            )
+            ))
             network = network.to(device)
             network.load_state_dict(checkpoint["state_dict"], strict=False)
     elif args.network == "LT":
