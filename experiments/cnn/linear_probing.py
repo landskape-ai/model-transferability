@@ -124,6 +124,8 @@ if __name__ == "__main__":
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
     p.add_argument("--batch_size", type=int, default=128)
+    p.add_argument("--caltech_path", type=str, default="/data/caltech101_data.npz")
+
     args = p.parse_args()
 
     if args.wandb:

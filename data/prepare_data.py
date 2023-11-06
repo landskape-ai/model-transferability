@@ -371,7 +371,7 @@ def prepare_expansive_data(args, dataset, data_path):
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "caltech101":
-        data = np.load("/data/caltech101_data.npz",allow_pickle=True)
+        data = np.load(args.caltech_path,allow_pickle=True)
         X_train = data["x_train"]
         y_train = data["y_train"]
         X_test = data["x_val"]
@@ -605,7 +605,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         class_names = ["non ASD", "ASD"]
         
     elif dataset == "caltech101":
-        data = np.load("/data/caltech101_data.npz",allow_pickle=True)
+        data = np.load(args.caltech_path,allow_pickle=True)
         X_train = data["x_train"]
         y_train = data["y_train"]
         X_test = data["x_val"]
