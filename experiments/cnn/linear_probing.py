@@ -107,6 +107,7 @@ if __name__ == "__main__":
             "oxfordpets",
             "stanfordcars",
             "sun397",
+            "caltech101",
         ],
         required=True,
     )
@@ -146,6 +147,21 @@ if __name__ == "__main__":
             transforms.Normalize(IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]),
         ]
     )
+    if args.dataset == 'caltech101':
+        preprocess = transforms.Compose(   
+            [
+                transforms.ToPILImage(),
+                transforms.Resize((224, 224)),
+                transforms.Lambda(
+                    lambda x: x.convert("RGB") if hasattr(x, "convert") else x
+                ),
+                transforms.ToTensor(),
+                transforms.Normalize(IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]),
+            ]
+
+        )
+
+
     loaders, class_names = prepare_additive_data(
         args, args.dataset, data_path=data_path, preprocess=preprocess
     )

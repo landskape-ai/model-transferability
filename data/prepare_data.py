@@ -16,6 +16,26 @@ from .const import GTSRB_LABEL_MAP, IMAGENETNORMALIZE
 from .dataset_lmdb import COOPLMDBDataset
 
 
+from torch.utils.data import Dataset, DataLoader
+
+# custom dataset class
+class CustomDataset(Dataset):
+    def __init__(self, images, labels= None, transforms = None):
+        self.labels = labels
+        self.images = images
+        self.transforms = transforms
+        
+    def __len__(self):
+        return len(self.images)
+    
+    def __getitem__(self, index):
+        data = self.images[index][:]
+        
+        if self.transforms:
+            data = self.transforms(data)
+            
+        return (data, self.labels[index])
+    
 def sample_n_shots(args, train_data):
     # Create an empty list to store the sampled indices
     sampled_indices = []
@@ -350,6 +370,39 @@ def prepare_expansive_data(args, dataset, data_path):
             "class_names": refine_classnames(test_data.classes),
             "mask": np.zeros((128, 128)),
         }
+    elif dataset == "caltech101":
+        data = np.load("/data/caltech101_data.npz",allow_pickle=True)
+        X_train = data["x_train"]
+        y_train = data["y_train"]
+        X_test = data["x_val"]
+        y_test = data["y_val"]
+
+
+        preprocess = transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                transforms.Lambda(lambda x: x.convert("RGB")),
+                transforms.Resize((128, 128)),
+                transforms.ToTensor(),
+            ]
+        )
+
+
+        train_data = CustomDataset(X_train, y_train, preprocess)
+        test_data = CustomDataset(X_test, y_test, preprocess) 
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
+        loaders = {
+            "train": DataLoader(
+                train_data, args.batch_size, shuffle=True, num_workers=8
+            ),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=8),
+        }
+        configs = {
+            "class_names": [f"{i}" for i in range(101)],
+            "mask": np.zeros((128, 128)),
+        }
+
     else:
         raise NotImplementedError(f"{dataset} not supported")
     return loaders, configs
@@ -550,6 +603,36 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "test": DataLoader(test_data, 64, shuffle=False, num_workers=2),
         }
         class_names = ["non ASD", "ASD"]
+        
+    elif dataset == "caltech101":
+        data = np.load("/data/caltech101_data.npz",allow_pickle=True)
+        X_train = data["x_train"]
+        y_train = data["y_train"]
+        X_test = data["x_val"]
+        y_test = data["y_val"]
+
+
+        # preprocess = transforms.Compose(
+        #     [
+        #         transforms.Lambda(lambda x: x.convert("RGB")),
+        #         transforms.Resize((128, 128)),
+        #         transforms.ToTensor(),
+        #     ]
+        # )
+
+
+        train_data = CustomDataset(X_train, y_train, preprocess)
+        test_data = CustomDataset(X_test, y_test, preprocess) 
+        if args.n_shot > 0:
+            train_data = sample_n_shots(args, train_data)
+        loaders = {
+            "train": DataLoader(
+                train_data, args.batch_size, shuffle=True, num_workers=8
+            ),
+            "test": DataLoader(test_data, 128, shuffle=False, num_workers=8),
+        }
+        class_names = [f"{i}" for i in range(101)]
+
     else:
         raise NotImplementedError(f"{dataset} not supported")
 

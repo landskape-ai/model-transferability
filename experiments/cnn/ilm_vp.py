@@ -116,6 +116,7 @@ if __name__ == "__main__":
             "oxfordpets",
             "stanfordcars",
             "sun397",
+            "caltech101"
         ],
         required=True,
     )
