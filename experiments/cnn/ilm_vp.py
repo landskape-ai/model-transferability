@@ -101,7 +101,7 @@ def get_pruned_model(args):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--model", choices=["resnet18", "resnet34", "resnet50"], default="resnet50")
+    p.add_argument("--model", choices=["vgg11","vgg16","vgg19","resnet18", "resnet34", "resnet50"], default="resnet50")
     p.add_argument("--network", choices=["sparsezoo", "LT", "dense"], default="LT")
     p.add_argument("--seed", type=int, default=4)
     p.add_argument(
