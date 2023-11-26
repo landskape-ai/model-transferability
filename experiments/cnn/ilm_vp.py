@@ -19,6 +19,10 @@ from torchvision.models import ResNet18_Weights, resnet18
 from torchvision.models import ResNet34_Weights, resnet34
 from torchvision.models import ResNet50_Weights, resnet50
 
+from torchvision.models import VGG11_Weights, vgg11
+from torchvision.models import VGG16_Weights, vgg16
+from torchvision.models import VGG19_Weights, vgg19
+
 sys.path.append(".")
 import calibration as cal
 import wandb as wb
@@ -162,7 +166,33 @@ if __name__ == "__main__":
             network = resnet34(weights=ResNet34_Weights.IMAGENET1K_V1).to(device)
         elif args.model == "resnet18":
             network = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1).to(device)
+        elif args.model == "vgg11":
+            network = vgg11(weights=VGG11_Weights.IMAGENET1K_V1).to(device)
+        elif args.model == "vgg16":
+            network = vgg16(weights=VGG16_Weights.IMAGENET1K_V1).to(device)
+        elif args.model == "vgg19":
+            network = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).to(device)         
     elif args.network == "sparsezoo":
+        if args.model == "vgg11":
+            network = torchvision.models.__dict__["vgg11"](pretrained=(False))
+            checkpoint = torch.load(os.path.join(
+                args.pretrained_dir, f"vgg11_checkpoint.pth"
+            ))
+            network = network.to(device)
+            network.load_state_dict(checkpoint["state_dict"], strict=False)
+        elif args.model == "vgg16":
+            network = torchvision.models.__dict__["vgg16"](pretrained=(False))
+            checkpoint = torch.load(os.path.join(
+                args.pretrained_dir, f"vgg16_checkpoint.pth"
+            ))
+            network = network.to(device)
+            network.load_state_dict(checkpoint["state_dict"], strict=False)
+        elif args.model == "vgg19":
+            network = torchvision.models.__dict__["vgg19"](pretrained=(False))
+            checkpoint = torch.load(os.path.join(
+                args.pretrained_dir, f"vgg19_checkpoint.pth"
+            ))
+            network = network.to(device)
         if args.model == "resnet34":
             network = torchvision.models.__dict__["resnet34"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
