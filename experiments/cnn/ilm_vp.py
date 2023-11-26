@@ -179,7 +179,7 @@ if __name__ == "__main__":
                 args.pretrained_dir, f"vgg11_checkpoint.pth"
             ))
             network = network.to(device)
-            network.load_state_dict(checkpoint["state_dict"], strict=False)
+            network.load_state_dict(checkpoint, strict=False)
         elif args.model == "vgg16":
             network = torchvision.models.__dict__["vgg16"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
@@ -193,6 +193,7 @@ if __name__ == "__main__":
                 args.pretrained_dir, f"vgg19_checkpoint.pth"
             ))
             network = network.to(device)
+            network.load_state_dict(checkpoint, strict=False)
         if args.model == "resnet34":
             network = torchvision.models.__dict__["resnet34"](pretrained=(False))
             checkpoint = torch.load(os.path.join(
