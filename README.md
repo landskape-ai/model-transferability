@@ -1,4 +1,4 @@
-<h1 align="center">Reprogramming Under Constraints</h1>
+<h1 align="center">Uncovering the Hidden Cost of Model Compression</h1>
 <p align="center">Diganta Misra<sup>*,1,2,3</sup>, Agam Goyal<sup>*,4</sup>, Bharat Runwal<sup>*,1,2</sup>, Pin Yu Chen<sup>5</sup></p>
 <p align="center"><sup>1</sup> Mila - Quebec AI Institute,<sup>2</sup> Landskape AI,<sup>3</sup> UdeM,<sup>4</sup> UW-Madison,<sup>5</sup> IBM Research</p>
 <p align="center"><sup>*</sup> Equal Contribution </p>
@@ -13,11 +13,7 @@
   <img src ="vp.png"  width="1000"/>
 </p>
 
-In the era of foundation models with huge pre-training budgets, the downstream tasks have been shifted to the narrative of efficient and fast adaptation. For classification-based tasks in the domain of computer vision, the two most efficient approaches have been **linear probing** (LP) and **visual prompting**/**reprogramming** (VP); the former aims to learn a classifier in the form of a linear head on the features extracted by the pre-trained model, while the latter maps the input data to the domain of the source data on which the model was originally pre-trained on. Although extensive studies have demonstrated the differences between LP and VP in terms of downstream performance, we explore the capabilities of the two aforementioned methods via the sparsity axis: (a) **Data sparsity**: the impact of few-shot adaptation and (b) **Model sparsity**: the impact of lottery tickets (LT). We demonstrate that <u>LT</u> are not universal reprogrammers, i.e., for certain target datasets, reprogramming an LT yields significantly lower performance than the reprogrammed dense model although their corresponding upstream performance is similar. Further, we demonstrate that the calibration of dense models is always superior to that of their lottery ticket counterparts under both LP and VP regimes. Our empirical study opens a new avenue of research into VP for sparse models and encourages further understanding of the performance beyond the accuracy achieved by VP under constraints of sparsity. 
-
-## What is in this repository?
-
-In this repository, we provide the code for our Reprogramming Under Constraints paper.
+In the era of resource-intensive foundation models, efficient adaptation in downstream tasks has become paramount. Visual Prompting (VP), inspired by prompting in Large Language Models (LLMs), has emerged as a key transfer learning method in computer vision. Aligned with the growing significance of efficiency, research in model compression has become pivotal to alleviate the computational burden in both training and deploying over-parameterized neural networks. A key goal in model compression is the development of sparse models capable of matching or surpassing the performance of their over-parameterized, dense counterparts. While prior research has explored the impact of model sparsity on transfer learning, its effects on visual prompting-based transfer remain unclear. This study addresses this gap, revealing that model sparsity adversely affects the performance of visual prompting-based transfer, particularly in low-data-volume scenarios. Furthermore, our findings highlight the negative influence of sparsity on the calibration of downstream visual-prompted models. This empirical exploration calls for a nuanced understanding beyond accuracy in sparse settings, opening avenues for further research in Visual Prompting for sparse models.
 
 ## Dependencies
 
