@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src ="vp.png"  width="1000"/>
+  <img src ="ss.png"  width="1000"/>
 </p>
 
 In the era of resource-intensive foundation models, efficient adaptation in downstream tasks has become paramount. Visual Prompting (VP), inspired by prompting in Large Language Models (LLMs), has emerged as a key transfer learning method in computer vision. Aligned with the growing significance of efficiency, research in model compression has become pivotal to alleviate the computational burden in both training and deploying over-parameterized neural networks. A key goal in model compression is the development of sparse models capable of matching or surpassing the performance of their over-parameterized, dense counterparts. While prior research has explored the impact of model sparsity on transfer learning, its effects on visual prompting-based transfer remain unclear. This study addresses this gap, revealing that model sparsity adversely affects the performance of visual prompting-based transfer, particularly in low-data-volume scenarios. Furthermore, our findings highlight the negative influence of sparsity on the calibration of downstream visual-prompted models. This empirical exploration calls for a nuanced understanding beyond accuracy in sparse settings, opening avenues for further research in Visual Prompting for sparse models.
