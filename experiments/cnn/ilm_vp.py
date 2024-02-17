@@ -6,6 +6,7 @@ from functools import partial
 
 import numpy as np
 import torch
+import timm
 import torchvision
 from PIL import Image
 from torch import nn
@@ -15,20 +16,11 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 from tqdm import tqdm
 
-from torchvision.models import ResNet18_Weights, resnet18
-from torchvision.models import ResNet34_Weights, resnet34
-from torchvision.models import ResNet50_Weights, resnet50
-
-from torchvision.models import VGG11_Weights, vgg11
-from torchvision.models import VGG16_Weights, vgg16
-from torchvision.models import VGG19_Weights, vgg19
-
 sys.path.append(".")
 import calibration as cal
 import wandb as wb
 
-from algorithms import (generate_label_mapping_by_frequency, get_dist_matrix,
-                        label_mapping_base)
+from algorithms import generate_label_mapping_by_frequency, get_dist_matrix, label_mapping_base
 from data import IMAGENETCLASSES, IMAGENETNORMALIZE, prepare_expansive_data
 from models import ExpansiveVisualPrompt
 from tools.mapping_visualization import plot_mapping
@@ -38,71 +30,24 @@ from tools.misc import gen_folder_name, set_seed
 
 
 def wandb_setup(args):
-    return wb.init(
-        config=args, name=args.run_name, project="Reprogram-Sparse", entity="landskape"
-    )
-
-
-def check_sparsity(model, conv1=True):
-    sum_list = 0
-    zero_sum = 0
-
-    for name, m in model.named_modules():
-        if isinstance(m, nn.Conv2d):
-            if name == "conv1":
-                if conv1:
-                    sum_list = sum_list + float(m.weight.nelement())
-                    zero_sum = zero_sum + float(torch.sum(m.weight == 0))
-                else:
-                    print("skip conv1 for sparsity checking")
-            else:
-                sum_list = sum_list + float(m.weight.nelement())
-                zero_sum = zero_sum + float(torch.sum(m.weight == 0))
-
-    print("* remain weight = ", 100 * (1 - zero_sum / sum_list), "%")
-
-    return 100 * (1 - zero_sum / sum_list)
-
-
-def get_pruned_model(args):
-    # pretrained = args.pretrained
-
-    # mask_dir = args.mask_dir
-
-    # -------------------------------------------
-    # works only for lottery ticket
-    pretrained = os.path.join(
-        args.pretrained_dir, f"resnet50_dyn4_{args.sparsity}_checkpoint.pth"
-    )
-    mask_dir = os.path.join(
-        args.pretrained_dir, f"resnet50_dyn4_{args.sparsity}_mask.pth"
-    )
-    # -------------------------------------------
-
-    current_mask_weight = torch.load(mask_dir)
-    curr_weight = torch.load(pretrained)
-
-    new_weights = {}
-    for name in current_mask_weight.keys():
-        name_ = name.replace("model.", "")
-        new_weights[str(name_)] = (
-            current_mask_weight[str(name)] * curr_weight[str(name)]
-        )
-
-    for k in curr_weight.keys():
-        if str(k) not in new_weights.keys():
-            # print(k)
-            k_ = k.replace("model.", "")
-
-            new_weights[k_] = curr_weight[k]
-
-    return new_weights
+    return wb.init(config=args, name=args.run_name, project="model-transferability", entity="landskape")
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--model", choices=["vgg11","vgg16","vgg19","resnet18", "resnet34", "resnet50"], default="resnet50")
-    p.add_argument("--network", choices=["sparsezoo", "LT", "dense"], default="LT")
+    p.add_argument(
+        "--model",
+        choices=[
+            "deit_small",
+            "deit_base",
+            "deit3_small",
+            "deit3_base",
+            "vit_base",
+            "moco_base",
+            "moco_small",
+        ],
+        default="deit_base",
+    )
     p.add_argument("--seed", type=int, default=4)
     p.add_argument(
         "--dataset",
@@ -120,26 +65,22 @@ if __name__ == "__main__":
             "oxfordpets",
             "stanfordcars",
             "sun397",
-            "caltech101"
+            "caltech101",
         ],
         required=True,
     )
     p.add_argument("--mapping-interval", type=int, default=1)
     p.add_argument("--epoch", type=int, default=100)
     p.add_argument("--lr", type=float, default=0.01)
-    p.add_argument("--results_path", type=str, default="/data/jaygala/ILM-VP/results")
-    p.add_argument(
-        "--pretrained_dir",
-        type=str,
-        default="/data/jaygala/ILM-VP/artifacts/ImageNetCheckpoint_LT",
-    )
-    p.add_argument("--sparsity", type=int, default=9)
+    p.add_argument("--results_path", type=str, default="results")
     p.add_argument("--n_shot", type=float, default=-1.0)
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
     p.add_argument("--batch_size", type=int, default=128)
     p.add_argument("--caltech_path", type=str, default="/data/caltech101_data.npz")
     args = p.parse_args()
+
+    args.run_name = f"{args.model}-{args.dataset}-{args.n_shot}shot-seed{args.seed}-ilm"
 
     if args.wandb:
         wb_logger = wandb_setup(args)
@@ -154,76 +95,50 @@ if __name__ == "__main__":
 
     # Data
     loaders, configs = prepare_expansive_data(args, args.dataset, data_path=data_path)
-    normalize = transforms.Normalize(
-        IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]
-    )
+    normalize = transforms.Normalize(IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"])
 
     # Network
-    if args.network == "dense":
-        if args.model == "resnet50":
-            network = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2).to(device)
-        elif args.model == "resnet34":
-            network = resnet34(weights=ResNet34_Weights.IMAGENET1K_V1).to(device)
-        elif args.model == "resnet18":
-            network = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1).to(device)
-        elif args.model == "vgg11":
-            network = vgg11(weights=VGG11_Weights.IMAGENET1K_V1).to(device)
-        elif args.model == "vgg16":
-            network = vgg16(weights=VGG16_Weights.IMAGENET1K_V1).to(device)
-        elif args.model == "vgg19":
-            network = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).to(device)         
-    elif args.network == "sparsezoo":
-        if args.model == "vgg11":
-            network = torchvision.models.__dict__["vgg11"](pretrained=(False))
-            checkpoint = torch.load(os.path.join(
-                args.pretrained_dir, f"vgg11_checkpoint.pth"
-            ))
-            network = network.to(device)
-            network.load_state_dict(checkpoint, strict=False)
-        elif args.model == "vgg16":
-            network = torchvision.models.__dict__["vgg16"](pretrained=(False))
-            checkpoint = torch.load(os.path.join(
-                args.pretrained_dir, f"vgg16_checkpoint.pth"
-            ))
-            network = network.to(device)
-            network.load_state_dict(checkpoint["state_dict"], strict=False)
-        elif args.model == "vgg19":
-            network = torchvision.models.__dict__["vgg19"](pretrained=(False))
-            checkpoint = torch.load(os.path.join(
-                args.pretrained_dir, f"vgg19_checkpoint.pth"
-            ))
-            network = network.to(device)
-            network.load_state_dict(checkpoint, strict=False)
-        if args.model == "resnet34":
-            network = torchvision.models.__dict__["resnet34"](pretrained=(False))
-            checkpoint = torch.load(os.path.join(
-                args.pretrained_dir, f"resnet34_checkpoint.pth"
-            ))
-            network = network.to(device)
-            network.load_state_dict(checkpoint["state_dict"], strict=False)
-        elif args.model == "resnet18":
-            network = torchvision.models.__dict__["resnet18"](pretrained=(False))
-            checkpoint = torch.load(os.path.join(
-                args.pretrained_dir, f"resnet18_checkpoint.pth"
-            ))
-            network = network.to(device)
-            network.load_state_dict(checkpoint["state_dict"], strict=False)
-    elif args.network == "LT":
-        network = torchvision.models.__dict__["resnet50"](pretrained=(False))
-        new_dict = get_pruned_model(args)
-        network = network.to(device)
-        network.load_state_dict(new_dict)
+    choices = (
+        [
+            "deit_base_patch16_224.fb_in1k",
+            "deit3_base_patch16_224.fb_in1k",
+            "vit_base_patch16_224.orig_in21k_ft_in1k",
+        ],
+    )
+    if args.model == "deit_small":
+        network = timm.create_model("deit_small_patch16_224.fb_in1k", pretrained=True)
+    elif args.model == "deit_base":
+        network = timm.create_model("deit_base_patch16_224.fb_in1k", pretrained=True)
+    elif args.model == "deit3_small":
+        network = timm.create_model("deit3_small_patch16_224.fb_in1k", pretrained=True)
+    elif args.model == "deit3_base":
+        network = timm.create_model("deit3_base_patch16_224.fb_in1k", pretrained=True)
+    elif args.model == "vit_base":
+        network = timm.create_model("vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=True)
+    elif args.model == "moco_small":
+        network = timm.create_model("vit_small_patch16_224.augreg_in1k", pretrained=False)
+        url = "https://dl.fbaipublicfiles.com/moco-v3/vit-s-300ep/linear-vit-s-300ep.pth.tar"
+        state_dict = torch.hub.load_state_dict_from_url(url)["state_dict"]
+        new_state_dict = {}
+        for key, value in state_dict.items():
+            new_state_dict[key.replace("module.", "")] = value
+        network.load_state_dict(new_state_dict)
+    elif args.model == "moco_base":
+        network = timm.create_model("vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=False)
+        url = "https://dl.fbaipublicfiles.com/moco-v3/vit-b-300ep/linear-vit-b-300ep.pth.tar"
+        state_dict = torch.hub.load_state_dict_from_url(url)["state_dict"]
+        new_state_dict = {}
+        for key, value in state_dict.items():
+            new_state_dict[key.replace("module.", "")] = value
+        network.load_state_dict(new_state_dict)
     else:
-        raise NotImplementedError(f"{args.network} is not supported")
+        raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
     network.eval()
+    network = network.to(device)
 
-    if args.wandb:
-        wb_logger.log({"Sparsity": check_sparsity(network, False)})
     # Visual Prompt
-    visual_prompt = ExpansiveVisualPrompt(
-        224, mask=configs["mask"], normalize=normalize
-    ).to(device)
+    visual_prompt = ExpansiveVisualPrompt(224, mask=configs["mask"], normalize=normalize).to(device)
 
     # Optimizer
     optimizer = torch.optim.Adam(visual_prompt.parameters(), lr=args.lr)
@@ -240,12 +155,8 @@ if __name__ == "__main__":
     scaler = GradScaler()
     for epoch in range(args.epoch):
         if epoch % args.mapping_interval == 0:
-            mapping_sequence = generate_label_mapping_by_frequency(
-                visual_prompt, network, loaders["train"]
-            )
-            label_mapping = partial(
-                label_mapping_base, mapping_sequence=mapping_sequence
-            )
+            mapping_sequence = generate_label_mapping_by_frequency(visual_prompt, network, loaders["train"])
+            label_mapping = partial(label_mapping_base, mapping_sequence=mapping_sequence)
         visual_prompt.train()
         total_num = 0
         true_num = 0
@@ -327,9 +238,7 @@ if __name__ == "__main__":
         logger.add_image("mapping-matrix", im, epoch)
         logger.add_scalar("test/acc", acc, epoch)
         if args.wandb:
-            wb_logger.log(
-                {"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num}
-            )
+            wb_logger.log({"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num})
 
         # Save CKPT
         state_dict = {
