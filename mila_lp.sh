@@ -1,4 +1,4 @@
-#SBATCH #!/bin/bash
+#!/bin/bash
 #SBATCH --time=12:00:00
 #SBATCH -c 8
 #SBATCH --job-name=LP_ViT_C10
