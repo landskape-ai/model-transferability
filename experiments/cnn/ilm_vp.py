@@ -5,8 +5,8 @@ import sys
 from functools import partial
 
 import numpy as np
-import torch
 import timm
+import torch
 import torchvision
 from PIL import Image
 from torch import nn
@@ -20,7 +20,8 @@ sys.path.append(".")
 import calibration as cal
 import wandb as wb
 
-from algorithms import generate_label_mapping_by_frequency, get_dist_matrix, label_mapping_base
+from algorithms import (generate_label_mapping_by_frequency, get_dist_matrix,
+                        label_mapping_base)
 from data import IMAGENETCLASSES, IMAGENETNORMALIZE, prepare_expansive_data
 from models import ExpansiveVisualPrompt
 from tools.mapping_visualization import plot_mapping
@@ -30,7 +31,12 @@ from tools.misc import gen_folder_name, set_seed
 
 
 def wandb_setup(args):
-    return wb.init(config=args, name=args.run_name, project="model-transferability", entity="landskape")
+    return wb.init(
+        config=args,
+        name=args.run_name,
+        project="model-transferability",
+        entity="landskape",
+    )
 
 
 if __name__ == "__main__":
@@ -95,7 +101,9 @@ if __name__ == "__main__":
 
     # Data
     loaders, configs = prepare_expansive_data(args, args.dataset, data_path=data_path)
-    normalize = transforms.Normalize(IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"])
+    normalize = transforms.Normalize(
+        IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]
+    )
 
     # Network
     choices = (
@@ -114,9 +122,13 @@ if __name__ == "__main__":
     elif args.model == "deit3_base":
         network = timm.create_model("deit3_base_patch16_224.fb_in1k", pretrained=True)
     elif args.model == "vit_base":
-        network = timm.create_model("vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=True)
+        network = timm.create_model(
+            "vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=True
+        )
     elif args.model == "moco_small":
-        network = timm.create_model("vit_small_patch16_224.augreg_in1k", pretrained=False)
+        network = timm.create_model(
+            "vit_small_patch16_224.augreg_in1k", pretrained=False
+        )
         url = "https://dl.fbaipublicfiles.com/moco-v3/vit-s-300ep/linear-vit-s-300ep.pth.tar"
         state_dict = torch.hub.load_state_dict_from_url(url)["state_dict"]
         new_state_dict = {}
@@ -124,7 +136,9 @@ if __name__ == "__main__":
             new_state_dict[key.replace("module.", "")] = value
         network.load_state_dict(new_state_dict)
     elif args.model == "moco_base":
-        network = timm.create_model("vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=False)
+        network = timm.create_model(
+            "vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=False
+        )
         url = "https://dl.fbaipublicfiles.com/moco-v3/vit-b-300ep/linear-vit-b-300ep.pth.tar"
         state_dict = torch.hub.load_state_dict_from_url(url)["state_dict"]
         new_state_dict = {}
@@ -138,7 +152,9 @@ if __name__ == "__main__":
     network = network.to(device)
 
     # Visual Prompt
-    visual_prompt = ExpansiveVisualPrompt(224, mask=configs["mask"], normalize=normalize).to(device)
+    visual_prompt = ExpansiveVisualPrompt(
+        224, mask=configs["mask"], normalize=normalize
+    ).to(device)
 
     # Optimizer
     optimizer = torch.optim.Adam(visual_prompt.parameters(), lr=args.lr)
@@ -155,8 +171,12 @@ if __name__ == "__main__":
     scaler = GradScaler()
     for epoch in range(args.epoch):
         if epoch % args.mapping_interval == 0:
-            mapping_sequence = generate_label_mapping_by_frequency(visual_prompt, network, loaders["train"])
-            label_mapping = partial(label_mapping_base, mapping_sequence=mapping_sequence)
+            mapping_sequence = generate_label_mapping_by_frequency(
+                visual_prompt, network, loaders["train"]
+            )
+            label_mapping = partial(
+                label_mapping_base, mapping_sequence=mapping_sequence
+            )
         visual_prompt.train()
         total_num = 0
         true_num = 0
@@ -238,7 +258,9 @@ if __name__ == "__main__":
         logger.add_image("mapping-matrix", im, epoch)
         logger.add_scalar("test/acc", acc, epoch)
         if args.wandb:
-            wb_logger.log({"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num})
+            wb_logger.log(
+                {"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num}
+            )
 
         # Save CKPT
         state_dict = {

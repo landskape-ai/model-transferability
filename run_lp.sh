@@ -1,3 +1,4 @@
+#!/bin/bash
 export CUDA_VISIBLE_DEVICES=0
 
 model=$1    # check `--model` choices in `experiments/cnn/ilm_vp.py` script
@@ -18,29 +19,13 @@ for n_shot in "${n_shots[@]}"; do
             exit 1
         fi
 
-        # ---------------------------------------------------------------------------
-        #                               ILM-VP experiment
-        # ---------------------------------------------------------------------------
-        python3 experiments/cnn/ilm_vp.py \
-            --model $model \
-            --n_shot $n_shot \
-            --seed $seed \
-            --batch_size $batch_size  \
-            --dataset $dataset \
-            --results_path results \
-            --wandb
+        folder_name=f"/home/mila/d/diganta.misra/scratch/mamvit/lp/${model}_${n_shot}_${seed}_${batch_size}_${dataset}"
 
         # ---------------------------------------------------------------------------
         #                                LP experiment
         # ---------------------------------------------------------------------------
-        python3 experiments/cnn/linear_probing.py \
-            --model $model \
-            --n_shot $n_shot \
-            --seed $seed \
-            --batch_size $batch_size \
-            --dataset $dataset \
-            --results_path results \
-            --wandb
+        sbatch /home/mila/d/diganta.misra/projects/model-transferability/mila_lp.sh $model $n_shot $seed $batch_size $dataset $folder_name
+
 
     done
 done

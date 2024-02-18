@@ -2,8 +2,8 @@ import argparse
 import os
 import sys
 
-import torch
 import timm
+import torch
 import torchvision
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
@@ -23,7 +23,12 @@ from tools.misc import gen_folder_name, set_seed
 
 
 def wandb_setup(args):
-    return wb.init(config=args, name=args.run_name, project="model-transferability", entity="landskape")
+    return wb.init(
+        config=args,
+        name=args.run_name,
+        project="model-transferability",
+        entity="landskape",
+    )
 
 
 if __name__ == "__main__":
@@ -88,7 +93,9 @@ if __name__ == "__main__":
     preprocess = transforms.Compose(
         [
             transforms.Resize((224, 224)),
-            transforms.Lambda(lambda x: x.convert("RGB") if hasattr(x, "convert") else x),
+            transforms.Lambda(
+                lambda x: x.convert("RGB") if hasattr(x, "convert") else x
+            ),
             transforms.ToTensor(),
             transforms.Normalize(IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]),
         ]
@@ -98,13 +105,19 @@ if __name__ == "__main__":
             [
                 transforms.ToPILImage(),
                 transforms.Resize((224, 224)),
-                transforms.Lambda(lambda x: x.convert("RGB") if hasattr(x, "convert") else x),
+                transforms.Lambda(
+                    lambda x: x.convert("RGB") if hasattr(x, "convert") else x
+                ),
                 transforms.ToTensor(),
-                transforms.Normalize(IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]),
+                transforms.Normalize(
+                    IMAGENETNORMALIZE["mean"], IMAGENETNORMALIZE["std"]
+                ),
             ]
         )
 
-    loaders, class_names = prepare_additive_data(args, args.dataset, data_path=data_path, preprocess=preprocess)
+    loaders, class_names = prepare_additive_data(
+        args, args.dataset, data_path=data_path, preprocess=preprocess
+    )
 
     if args.model == "deit_small":
         network = timm.create_model("deit_small_patch16_224.fb_in1k", pretrained=True)
@@ -115,9 +128,13 @@ if __name__ == "__main__":
     elif args.model == "deit3_base":
         network = timm.create_model("deit3_base_patch16_224.fb_in1k", pretrained=True)
     elif args.model == "vit_base":
-        network = timm.create_model("vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=True)
+        network = timm.create_model(
+            "vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=True
+        )
     elif args.model == "moco_small":
-        network = timm.create_model("vit_small_patch16_224.augreg_in1k", pretrained=False)
+        network = timm.create_model(
+            "vit_small_patch16_224.augreg_in1k", pretrained=False
+        )
         url = "https://dl.fbaipublicfiles.com/moco-v3/vit-s-300ep/linear-vit-s-300ep.pth.tar"
         state_dict = torch.hub.load_state_dict_from_url(url)["state_dict"]
         new_state_dict = {}
@@ -125,7 +142,9 @@ if __name__ == "__main__":
             new_state_dict[key.replace("module.", "")] = value
         network.load_state_dict(new_state_dict)
     elif args.model == "moco_base":
-        network = timm.create_model("vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=False)
+        network = timm.create_model(
+            "vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=False
+        )
         url = "https://dl.fbaipublicfiles.com/moco-v3/vit-b-300ep/linear-vit-b-300ep.pth.tar"
         state_dict = torch.hub.load_state_dict_from_url(url)["state_dict"]
         new_state_dict = {}
@@ -216,7 +235,9 @@ if __name__ == "__main__":
             pbar.set_postfix_str(f"Acc {100*acc:.2f}%")
         logger.add_scalar("test/acc", acc, epoch)
         if args.wandb:
-            wb_logger.log({"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num})
+            wb_logger.log(
+                {"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num}
+            )
 
         # Save CKPT
         state_dict = {
