@@ -4,6 +4,7 @@ import sys
 
 import torch
 import timm
+from timm.models import create_model
 import torchvision
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
@@ -16,7 +17,12 @@ sys.path.append(".")
 import calibration as cal
 import wandb as wb
 
+sys.path.append("VMamba")
+from classification.models.vmamba import VSSM
+from functools import partial
+
 from data import IMAGENETNORMALIZE, prepare_additive_data
+from models import models_mamba
 from tools.misc import gen_folder_name, set_seed
 
 # from cfg import *
@@ -38,6 +44,11 @@ if __name__ == "__main__":
             "vit_base",
             "moco_base",
             "moco_small",
+            "vim_tiny",
+            "vim_small",
+            "vssm_tiny",
+            "vssm_small",
+            "vssm_base",
         ],
         default="deit_base",
     )
@@ -132,16 +143,143 @@ if __name__ == "__main__":
         for key, value in state_dict.items():
             new_state_dict[key.replace("module.", "")] = value
         network.load_state_dict(new_state_dict)
+    elif args.model in ["vim_tiny", "vim_small"]:
+        if args.model == "vim_tiny":
+            network = create_model(
+                "vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_div2",
+                pretrained=False,
+                num_classes=1000,
+                drop_rate=0.0,
+                drop_path_rate=0.1,
+                drop_block_rate=None,
+                img_size=224,
+            )
+
+            checkpoint = torch.load("pretrained_models/vim_t_midclstok_76p1acc.pth", map_location="cpu")
+
+        else:
+            network = create_model(
+                "vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_div2",
+                pretrained=False,
+                num_classes=1000,
+                drop_rate=0.0,
+                drop_path_rate=0.1,
+                drop_block_rate=None,
+                img_size=224,
+            )
+
+            checkpoint = torch.load("pretrained_models/vim_s_midclstok_80p5acc.pth", map_location="cpu")
+
+        checkpoint_model = checkpoint["model"]
+        state_dict = network.state_dict()
+        for k in ["head.weight", "head.bias", "head_dist.weight", "head_dist.bias"]:
+            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+                print(f"Removing key {k} from pretrained checkpoint")
+                del checkpoint_model[k]
+
+        # interpolate position embedding
+        pos_embed_checkpoint = checkpoint_model["pos_embed"]
+        embedding_size = pos_embed_checkpoint.shape[-1]
+        num_patches = network.patch_embed.num_patches
+        num_extra_tokens = network.pos_embed.shape[-2] - num_patches
+        # height (== width) for the checkpoint position embedding
+        orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
+        # height (== width) for the new position embedding
+        new_size = int(num_patches**0.5)
+        # class_token and dist_token are kept unchanged
+        extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
+        # only the position tokens are interpolated
+        pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
+        pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
+        pos_tokens = torch.nn.functional.interpolate(
+            pos_tokens, size=(new_size, new_size), mode="bicubic", align_corners=False
+        )
+        pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
+        new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
+        checkpoint_model["pos_embed"] = new_pos_embed
+
+        network.load_state_dict(checkpoint_model, strict=False)
+    elif args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
+        if args.model == "vssm_tiny":
+            network = partial(
+                VSSM,
+                patch_size=16,
+                in_chans=3,
+                num_classes=1000,
+                downsample_version="v1",
+                patchembed_version="v1",
+                dims=96,
+                depths=[2, 2, 9, 2],
+                mlp_ratio=0.0,
+                ssm_d_state=16,
+                ssm_ratio=2.0,
+                ssm_dt_rank="auto",
+                drop_path_rate=0.2,
+            )()
+
+            checkpoint = torch.load("pretrained_models/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu")
+
+        elif args.model == "vssm_small":
+            network = partial(
+                VSSM,
+                patch_size=16,
+                in_chans=3,
+                num_classes=1000,
+                downsample_version="v1",
+                patchembed_version="v1",
+                dims=96,
+                depths=[2, 2, 27, 2],
+                mlp_ratio=0.0,
+                ssm_d_state=16,
+                ssm_ratio=2.0,
+                ssm_dt_rank="auto",
+                drop_path_rate=0.3,
+            )()
+
+            checkpoint = torch.load("pretrained_models/vssmsmall_dp03_ckpt_epoch_238.pth", map_location="cpu")
+
+        elif args.model == "vssm_base":
+            network = partial(
+                VSSM,
+                patch_size=16,
+                in_chans=3,
+                num_classes=1000,
+                downsample_version="v1",
+                patchembed_version="v1",
+                dims=128,
+                depths=[2, 2, 27, 2],
+                mlp_ratio=0.0,
+                ssm_d_state=16,
+                ssm_ratio=2.0,
+                ssm_dt_rank="auto",
+                drop_path_rate=0.5,
+            )()
+
+            checkpoint = torch.load("pretrained_models/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu")
+
+        checkpoint_model = checkpoint["model"]
+        state_dict = network.state_dict()
+        for k in ["classifier.head.weight", "classifier.head.bias"]:
+            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+                print(f"Removing key {k} from pretrained checkpoint")
+                del checkpoint_model[k]
     else:
         raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
     network.eval()
-    network.head = torch.nn.Linear(network.head.in_features, len(class_names))
-    network.head.requires_grad_(True)
+    if args.model in args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
+        network.classifier.head = torch.nn.Linear(network.classifier.head.in_features, len(class_names))
+        network.classifier.head.requires_grad_(True)
+    else:
+        network.head = torch.nn.Linear(network.head.in_features, len(class_names))
+        network.head.requires_grad_(True)
     network = network.to(device)
 
     # Optimizer
-    optimizer = torch.optim.Adam(network.head.parameters(), lr=args.lr)
+    if args.model in args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
+        optimizer = torch.optim.Adam(network.classifier.head.parameters(), lr=args.lr)
+    else:
+        optimizer = torch.optim.Adam(network.head.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[int(0.5 * args.epoch), int(0.72 * args.epoch)], gamma=0.1
     )
@@ -219,8 +357,12 @@ if __name__ == "__main__":
             wb_logger.log({"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num})
 
         # Save CKPT
+        if args.model in args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
+            fc_dict = network.classifier.head.state_dict()
+        else:
+            fc_dict = network.head.state_dict()
         state_dict = {
-            "fc_dict": network.head.state_dict(),
+            "fc_dict": fc_dict,
             "optimizer_dict": optimizer.state_dict(),
             "epoch": epoch,
             "best_acc": best_acc,
