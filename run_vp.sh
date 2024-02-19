@@ -19,7 +19,7 @@ for n_shot in "${n_shots[@]}"; do
             exit 1
         fi
 
-        folder_name=f"/home/mila/d/diganta.misra/scratch/mamvit/vp/${model}_${n_shot}_${seed}_${batch_size}_${dataset}"
+        folder_name="/home/mila/d/diganta.misra/scratch/mamvit/vp/${model}_${n_shot}_${seed}_${batch_size}_${dataset}"
 
         # ---------------------------------------------------------------------------
         #                               ILM-VP experiment
