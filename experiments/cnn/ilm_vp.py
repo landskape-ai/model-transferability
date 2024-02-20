@@ -169,7 +169,7 @@ if __name__ == "__main__":
             )
 
             checkpoint = torch.load(
-                "pretrained_models/vim_t_midclstok_76p1acc.pth", map_location="cpu"
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
             )
 
         else:
@@ -184,7 +184,7 @@ if __name__ == "__main__":
             )
 
             checkpoint = torch.load(
-                "pretrained_models/vim_s_midclstok_80p5acc.pth", map_location="cpu"
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_s_midclstok_80p5acc.pth", map_location="cpu"
             )
 
         checkpoint_model = checkpoint["model"]
@@ -240,7 +240,7 @@ if __name__ == "__main__":
             )()
 
             checkpoint = torch.load(
-                "pretrained_models/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu"
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu"
             )
 
         elif args.model == "vssm_small":
@@ -261,7 +261,7 @@ if __name__ == "__main__":
             )()
 
             checkpoint = torch.load(
-                "pretrained_models/vssmsmall_dp03_ckpt_epoch_238.pth",
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmsmall_dp03_ckpt_epoch_238.pth",
                 map_location="cpu",
             )
 
@@ -283,7 +283,7 @@ if __name__ == "__main__":
             )()
 
             checkpoint = torch.load(
-                "pretrained_models/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu"
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu"
             )
 
         checkpoint_model = checkpoint["model"]
