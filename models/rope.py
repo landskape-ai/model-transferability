@@ -11,9 +11,8 @@
 from math import pi
 
 import torch
-from torch import nn
-
 from einops import rearrange, repeat
+from torch import nn
 
 
 def broadcat(tensors, dim=-1):
@@ -58,7 +57,9 @@ class VisionRotaryEmbedding(nn.Module):
         if custom_freqs:
             freqs = custom_freqs
         elif freqs_for == "lang":
-            freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
+            freqs = 1.0 / (
+                theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim)
+            )
         elif freqs_for == "pixel":
             freqs = torch.linspace(1.0, max_freq / 2, dim // 2) * pi
         elif freqs_for == "constant":
@@ -89,7 +90,11 @@ class VisionRotaryEmbedding(nn.Module):
         assert (
             rot_dim <= t.shape[-1]
         ), f"feature dimension {t.shape[-1]} is not of sufficient size to rotate in all the positions {rot_dim}"
-        t_left, t, t_right = t[..., :start_index], t[..., start_index:end_index], t[..., end_index:]
+        t_left, t, t_right = (
+            t[..., :start_index],
+            t[..., start_index:end_index],
+            t[..., end_index:],
+        )
         t = (t * self.freqs_cos) + (rotate_half(t) * self.freqs_sin)
         return torch.cat((t_left, t, t_right), dim=-1)
 
@@ -110,7 +115,9 @@ class VisionRotaryEmbeddingFast(nn.Module):
         if custom_freqs:
             freqs = custom_freqs
         elif freqs_for == "lang":
-            freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
+            freqs = 1.0 / (
+                theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim)
+            )
         elif freqs_for == "pixel":
             freqs = torch.linspace(1.0, max_freq / 2, dim // 2) * pi
         elif freqs_for == "constant":
@@ -137,7 +144,9 @@ class VisionRotaryEmbeddingFast(nn.Module):
     def forward(self, t):
         if t.shape[1] % 2 != 0:
             t_spatial = t[:, 1:, :]
-            t_spatial = t_spatial * self.freqs_cos + rotate_half(t_spatial) * self.freqs_sin
+            t_spatial = (
+                t_spatial * self.freqs_cos + rotate_half(t_spatial) * self.freqs_sin
+            )
             return torch.cat((t[:, :1, :], t_spatial), dim=1)
         else:
             return t * self.freqs_cos + rotate_half(t) * self.freqs_sin

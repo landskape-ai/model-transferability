@@ -1,2 +1,2 @@
-from .clip import *
 from . import mock
+from .clip import *

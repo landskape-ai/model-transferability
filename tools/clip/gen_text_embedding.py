@@ -1,7 +1,10 @@
-import torch
 from typing import List
+
+import torch
 from tqdm import tqdm
+
 import clip
+
 
 def get_text_ensemble_embedding(classnames, templates, model):
     device = next(model.parameters()).device
@@ -17,6 +20,7 @@ def get_text_ensemble_embedding(classnames, templates, model):
             zeroshot_weights.append(class_embedding)
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).to(device)
     return zeroshot_weights
+
 
 def get_saparate_text_embedding(classnames, templates, model):
     device = next(model.parameters()).device

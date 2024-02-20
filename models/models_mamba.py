@@ -1,31 +1,27 @@
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
-import torch
-import torch.nn as nn
+import math
+import random
+from collections import namedtuple
 from functools import partial
-from torch import Tensor
 from typing import Optional
 
-from timm.models.vision_transformer import VisionTransformer, _cfg
-from timm.models.registry import register_model
-from timm.models.layers import trunc_normal_
-
-from timm.models.layers import DropPath, PatchEmbed
-from timm.models.vision_transformer import _load_weights
-
-import math
-
-from collections import namedtuple
-
+import torch
+import torch.nn as nn
 from mamba_ssm.modules.mamba_simple import Mamba
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
+from timm.models.layers import DropPath, PatchEmbed, trunc_normal_
+from timm.models.registry import register_model
+from timm.models.vision_transformer import (VisionTransformer, _cfg,
+                                            _load_weights)
+from torch import Tensor
 
 from models.rope import *
-import random
 
 try:
-    from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
+    from mamba_ssm.ops.triton.layernorm import (RMSNorm, layer_norm_fn,
+                                                rms_norm_fn)
 except ImportError:
     RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
@@ -74,7 +70,12 @@ class Block(nn.Module):
                 self.norm, (nn.LayerNorm, RMSNorm)
             ), "Only LayerNorm and RMSNorm are supported for fused_add_norm"
 
-    def forward(self, hidden_states: Tensor, residual: Optional[Tensor] = None, inference_params=None):
+    def forward(
+        self,
+        hidden_states: Tensor,
+        residual: Optional[Tensor] = None,
+        inference_params=None,
+    ):
         r"""Pass the input through the encoder layer.
 
         Args:
@@ -91,7 +92,9 @@ class Block(nn.Module):
             if self.residual_in_fp32:
                 residual = residual.to(torch.float32)
         else:
-            fused_add_norm_fn = rms_norm_fn if isinstance(self.norm, RMSNorm) else layer_norm_fn
+            fused_add_norm_fn = (
+                rms_norm_fn if isinstance(self.norm, RMSNorm) else layer_norm_fn
+            )
             if residual is None:
                 hidden_states, residual = fused_add_norm_fn(
                     hidden_states,
@@ -116,7 +119,9 @@ class Block(nn.Module):
         return hidden_states, residual
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
-        return self.mixer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
+        return self.mixer.allocate_inference_cache(
+            batch_size, max_seqlen, dtype=dtype, **kwargs
+        )
 
 
 def create_block(
@@ -135,8 +140,16 @@ def create_block(
     if ssm_cfg is None:
         ssm_cfg = {}
     factory_kwargs = {"device": device, "dtype": dtype}
-    mixer_cls = partial(Mamba, layer_idx=layer_idx, bimamba_type=bimamba_type, **ssm_cfg, **factory_kwargs)
-    norm_cls = partial(nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs)
+    mixer_cls = partial(
+        Mamba,
+        layer_idx=layer_idx,
+        bimamba_type=bimamba_type,
+        **ssm_cfg,
+        **factory_kwargs,
+    )
+    norm_cls = partial(
+        nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs
+    )
     block = Block(
         d_model,
         mixer_cls,
@@ -236,29 +249,48 @@ class VisionMamba(nn.Module):
 
         # pretrain parameters
         self.num_classes = num_classes
-        self.d_model = self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+        self.d_model = (
+            self.num_features
+        ) = self.embed_dim = embed_dim  # num_features for consistency with other models
 
-        self.patch_embed = PatchEmbed(img_size=img_size, patch_size=patch_size, in_chans=channels, embed_dim=embed_dim)
+        self.patch_embed = PatchEmbed(
+            img_size=img_size,
+            patch_size=patch_size,
+            in_chans=channels,
+            embed_dim=embed_dim,
+        )
         num_patches = self.patch_embed.num_patches
 
         if if_cls_token:
             self.cls_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
 
         if if_abs_pos_embed:
-            self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_tokens, self.embed_dim))
+            self.pos_embed = nn.Parameter(
+                torch.zeros(1, num_patches + self.num_tokens, self.embed_dim)
+            )
             self.pos_drop = nn.Dropout(p=drop_rate)
 
         if if_rope:
             half_head_dim = embed_dim // 2
             hw_seq_len = img_size // patch_size
-            self.rope = VisionRotaryEmbeddingFast(dim=half_head_dim, pt_seq_len=pt_hw_seq_len, ft_seq_len=hw_seq_len)
-        self.head = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
+            self.rope = VisionRotaryEmbeddingFast(
+                dim=half_head_dim, pt_seq_len=pt_hw_seq_len, ft_seq_len=hw_seq_len
+            )
+        self.head = (
+            nn.Linear(self.num_features, num_classes)
+            if num_classes > 0
+            else nn.Identity()
+        )
 
         # TODO: release this comment
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        dpr = [
+            x.item() for x in torch.linspace(0, drop_path_rate, depth)
+        ]  # stochastic depth decay rule
         # import ipdb;ipdb.set_trace()
         inter_dpr = [0.0] + dpr
-        self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
+        self.drop_path = (
+            DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
+        )
         # transformer blocks
         self.layers = nn.ModuleList(
             [
@@ -279,7 +311,9 @@ class VisionMamba(nn.Module):
         )
 
         # output head
-        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(embed_dim, eps=norm_epsilon, **factory_kwargs)
+        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
+            embed_dim, eps=norm_epsilon, **factory_kwargs
+        )
 
         self.pre_logits = nn.Identity()
 
@@ -300,7 +334,9 @@ class VisionMamba(nn.Module):
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
-            i: layer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
+            i: layer.allocate_inference_cache(
+                batch_size, max_seqlen, dtype=dtype, **kwargs
+            )
             for i, layer in enumerate(self.layers)
         }
 
@@ -318,7 +354,9 @@ class VisionMamba(nn.Module):
         B = x.shape[0]
         x = self.patch_embed(x)
         if self.if_cls_token:
-            cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+            cls_token = self.cls_token.expand(
+                x.shape[0], -1, -1
+            )  # stole cls_tokens impl from Phil Wang, thanks
             x = torch.cat((cls_token, x), dim=1)
 
         if self.if_abs_pos_embed:
@@ -335,7 +373,9 @@ class VisionMamba(nn.Module):
                 if residual is not None and self.if_rope_residual:
                     residual = self.rope(residual)
 
-            hidden_states, residual = layer(hidden_states, residual, inference_params=inference_params)
+            hidden_states, residual = layer(
+                hidden_states, residual, inference_params=inference_params
+            )
 
         if not self.fused_add_norm:
             if residual is None:
@@ -345,7 +385,9 @@ class VisionMamba(nn.Module):
             hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
         else:
             # Set prenorm=False here since we don't need the residual
-            fused_add_norm_fn = rms_norm_fn if isinstance(self.norm_f, RMSNorm) else layer_norm_fn
+            fused_add_norm_fn = (
+                rms_norm_fn if isinstance(self.norm_f, RMSNorm) else layer_norm_fn
+            )
             hidden_states = fused_add_norm_fn(
                 self.drop_path(hidden_states),
                 self.norm_f.weight,
@@ -380,7 +422,9 @@ class VisionMamba(nn.Module):
 
 
 @register_model
-def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(pretrained=False, **kwargs):
+def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(
+    pretrained=False, **kwargs
+):
     model = VisionMamba(
         patch_size=16,
         embed_dim=192,
@@ -397,7 +441,9 @@ def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_resid
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
@@ -423,13 +469,17 @@ def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_resid
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
 
 @register_model
-def vim_tiny_patch8_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(pretrained=False, **kwargs):
+def vim_tiny_patch8_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(
+    pretrained=False, **kwargs
+):
     model = VisionMamba(
         patch_size=8,
         embed_dim=192,
@@ -446,7 +496,9 @@ def vim_tiny_patch8_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residu
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
@@ -472,13 +524,17 @@ def vim_tiny_patch8_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residu
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
 
 @register_model
-def vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(pretrained=False, **kwargs):
+def vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(
+    pretrained=False, **kwargs
+):
     model = VisionMamba(
         patch_size=16,
         embed_dim=384,
@@ -495,13 +551,17 @@ def vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_resi
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
 
 @register_model
-def vim_base_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(pretrained=False, **kwargs):
+def vim_base_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_residual(
+    pretrained=False, **kwargs
+):
     model = VisionMamba(
         patch_size=16,
         embed_dim=768,
@@ -518,39 +578,38 @@ def vim_base_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_rope_also_resid
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
+
+import math
+import random
+from collections import namedtuple
+from functools import partial
+from typing import Optional
 
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
 import torch
 import torch.nn as nn
-from functools import partial
-from torch import Tensor
-from typing import Optional
-
-from timm.models.vision_transformer import VisionTransformer, _cfg
-from timm.models.registry import register_model
-from timm.models.layers import trunc_normal_, lecun_normal_
-
-from timm.models.layers import DropPath, to_2tuple
-from timm.models.vision_transformer import _load_weights
-
-import math
-
-from collections import namedtuple
-
 from mamba_ssm.modules.mamba_simple import Mamba
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
+from timm.models.layers import (DropPath, lecun_normal_, to_2tuple,
+                                trunc_normal_)
+from timm.models.registry import register_model
+from timm.models.vision_transformer import (VisionTransformer, _cfg,
+                                            _load_weights)
+from torch import Tensor
 
 from models.rope import *
-import random
 
 try:
-    from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
+    from mamba_ssm.ops.triton.layernorm import (RMSNorm, layer_norm_fn,
+                                                rms_norm_fn)
 except ImportError:
     RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
@@ -569,18 +628,30 @@ class PatchEmbed(nn.Module):
     """2D Image to Patch Embedding"""
 
     def __init__(
-        self, img_size=224, patch_size=16, stride=16, in_chans=3, embed_dim=768, norm_layer=None, flatten=True
+        self,
+        img_size=224,
+        patch_size=16,
+        stride=16,
+        in_chans=3,
+        embed_dim=768,
+        norm_layer=None,
+        flatten=True,
     ):
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
         self.img_size = img_size
         self.patch_size = patch_size
-        self.grid_size = ((img_size[0] - patch_size[0]) // stride + 1, (img_size[1] - patch_size[1]) // stride + 1)
+        self.grid_size = (
+            (img_size[0] - patch_size[0]) // stride + 1,
+            (img_size[1] - patch_size[1]) // stride + 1,
+        )
         self.num_patches = self.grid_size[0] * self.grid_size[1]
         self.flatten = flatten
 
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=stride)
+        self.proj = nn.Conv2d(
+            in_chans, embed_dim, kernel_size=patch_size, stride=stride
+        )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -629,7 +700,12 @@ class Block(nn.Module):
                 self.norm, (nn.LayerNorm, RMSNorm)
             ), "Only LayerNorm and RMSNorm are supported for fused_add_norm"
 
-    def forward(self, hidden_states: Tensor, residual: Optional[Tensor] = None, inference_params=None):
+    def forward(
+        self,
+        hidden_states: Tensor,
+        residual: Optional[Tensor] = None,
+        inference_params=None,
+    ):
         r"""Pass the input through the encoder layer.
 
         Args:
@@ -646,7 +722,9 @@ class Block(nn.Module):
             if self.residual_in_fp32:
                 residual = residual.to(torch.float32)
         else:
-            fused_add_norm_fn = rms_norm_fn if isinstance(self.norm, RMSNorm) else layer_norm_fn
+            fused_add_norm_fn = (
+                rms_norm_fn if isinstance(self.norm, RMSNorm) else layer_norm_fn
+            )
             if residual is None:
                 hidden_states, residual = fused_add_norm_fn(
                     hidden_states,
@@ -671,7 +749,9 @@ class Block(nn.Module):
         return hidden_states, residual
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
-        return self.mixer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
+        return self.mixer.allocate_inference_cache(
+            batch_size, max_seqlen, dtype=dtype, **kwargs
+        )
 
 
 def create_block(
@@ -704,7 +784,9 @@ def create_block(
         **ssm_cfg,
         **factory_kwargs,
     )
-    norm_cls = partial(nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs)
+    norm_cls = partial(
+        nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs
+    )
     block = Block(
         d_model,
         mixer_cls,
@@ -821,10 +903,16 @@ class VisionMamba(nn.Module):
 
         # pretrain parameters
         self.num_classes = num_classes
-        self.d_model = self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+        self.d_model = (
+            self.num_features
+        ) = self.embed_dim = embed_dim  # num_features for consistency with other models
 
         self.patch_embed = PatchEmbed(
-            img_size=img_size, patch_size=patch_size, stride=stride, in_chans=channels, embed_dim=embed_dim
+            img_size=img_size,
+            patch_size=patch_size,
+            stride=stride,
+            in_chans=channels,
+            embed_dim=embed_dim,
         )
         num_patches = self.patch_embed.num_patches
 
@@ -838,20 +926,32 @@ class VisionMamba(nn.Module):
                 # self.num_tokens = 1
 
         if if_abs_pos_embed:
-            self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_tokens, self.embed_dim))
+            self.pos_embed = nn.Parameter(
+                torch.zeros(1, num_patches + self.num_tokens, self.embed_dim)
+            )
             self.pos_drop = nn.Dropout(p=drop_rate)
 
         if if_rope:
             half_head_dim = embed_dim // 2
             hw_seq_len = img_size // patch_size
-            self.rope = VisionRotaryEmbeddingFast(dim=half_head_dim, pt_seq_len=pt_hw_seq_len, ft_seq_len=hw_seq_len)
-        self.head = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
+            self.rope = VisionRotaryEmbeddingFast(
+                dim=half_head_dim, pt_seq_len=pt_hw_seq_len, ft_seq_len=hw_seq_len
+            )
+        self.head = (
+            nn.Linear(self.num_features, num_classes)
+            if num_classes > 0
+            else nn.Identity()
+        )
 
         # TODO: release this comment
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        dpr = [
+            x.item() for x in torch.linspace(0, drop_path_rate, depth)
+        ]  # stochastic depth decay rule
         # import ipdb;ipdb.set_trace()
         inter_dpr = [0.0] + dpr
-        self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
+        self.drop_path = (
+            DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
+        )
         # transformer blocks
         self.layers = nn.ModuleList(
             [
@@ -875,7 +975,9 @@ class VisionMamba(nn.Module):
         )
 
         # output head
-        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(embed_dim, eps=norm_epsilon, **factory_kwargs)
+        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
+            embed_dim, eps=norm_epsilon, **factory_kwargs
+        )
 
         # self.pre_logits = nn.Identity()
 
@@ -902,20 +1004,32 @@ class VisionMamba(nn.Module):
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
-            i: layer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
+            i: layer.allocate_inference_cache(
+                batch_size, max_seqlen, dtype=dtype, **kwargs
+            )
             for i, layer in enumerate(self.layers)
         }
 
     @torch.jit.ignore
     def no_weight_decay(self):
-        return {"pos_embed", "cls_token", "dist_token", "cls_token_head", "cls_token_tail"}
+        return {
+            "pos_embed",
+            "cls_token",
+            "dist_token",
+            "cls_token_head",
+            "cls_token_tail",
+        }
 
     @torch.jit.ignore()
     def load_pretrained(self, checkpoint_path, prefix=""):
         _load_weights(self, checkpoint_path, prefix)
 
     def forward_features(
-        self, x, inference_params=None, if_random_cls_token_position=False, if_random_token_rank=False
+        self,
+        x,
+        inference_params=None,
+        if_random_cls_token_position=False,
+        if_random_token_rank=False,
     ):
         # taken from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
         # with slight modifications to add the dist_token
@@ -934,14 +1048,22 @@ class VisionMamba(nn.Module):
                     cls_token = self.cls_token.expand(B, -1, -1)
                     token_position = M // 2
                     # add cls token in the middle
-                    x = torch.cat((x[:, :token_position, :], cls_token, x[:, token_position:, :]), dim=1)
+                    x = torch.cat(
+                        (x[:, :token_position, :], cls_token, x[:, token_position:, :]),
+                        dim=1,
+                    )
                 elif if_random_cls_token_position:
                     cls_token = self.cls_token.expand(B, -1, -1)
                     token_position = random.randint(0, M)
-                    x = torch.cat((x[:, :token_position, :], cls_token, x[:, token_position:, :]), dim=1)
+                    x = torch.cat(
+                        (x[:, :token_position, :], cls_token, x[:, token_position:, :]),
+                        dim=1,
+                    )
                     print("token_position: ", token_position)
                 else:
-                    cls_token = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+                    cls_token = self.cls_token.expand(
+                        B, -1, -1
+                    )  # stole cls_tokens impl from Phil Wang, thanks
                     token_position = 0
                     x = torch.cat((cls_token, x), dim=1)
                 M = x.shape[1]
@@ -957,12 +1079,15 @@ class VisionMamba(nn.Module):
             x = self.pos_drop(x)
 
         if if_random_token_rank:
-
             # 生成随机 shuffle 索引
             shuffle_indices = torch.randperm(M)
 
             if isinstance(token_position, list):
-                print("original value: ", x[0, token_position[0], 0], x[0, token_position[1], 0])
+                print(
+                    "original value: ",
+                    x[0, token_position[0], 0],
+                    x[0, token_position[1], 0],
+                )
             else:
                 print("original value: ", x[0, token_position, 0])
             print("original token_position: ", token_position)
@@ -973,21 +1098,31 @@ class VisionMamba(nn.Module):
             if isinstance(token_position, list):
                 # 找到 cls token 在 shuffle 之后的新位置
                 new_token_position = [
-                    torch.where(shuffle_indices == token_position[i])[0].item() for i in range(len(token_position))
+                    torch.where(shuffle_indices == token_position[i])[0].item()
+                    for i in range(len(token_position))
                 ]
                 token_position = new_token_position
             else:
                 # 找到 cls token 在 shuffle 之后的新位置
-                token_position = torch.where(shuffle_indices == token_position)[0].item()
+                token_position = torch.where(shuffle_indices == token_position)[
+                    0
+                ].item()
 
             if isinstance(token_position, list):
-                print("new value: ", x[0, token_position[0], 0], x[0, token_position[1], 0])
+                print(
+                    "new value: ",
+                    x[0, token_position[0], 0],
+                    x[0, token_position[1], 0],
+                )
             else:
                 print("new value: ", x[0, token_position, 0])
             print("new token_position: ", token_position)
 
         if_flip_img_sequences = False
-        if self.flip_img_sequences_ratio > 0 and (self.flip_img_sequences_ratio - random.random()) > 1e-5:
+        if (
+            self.flip_img_sequences_ratio > 0
+            and (self.flip_img_sequences_ratio - random.random()) > 1e-5
+        ):
             x = x.flip([1])
             if_flip_img_sequences = True
 
@@ -996,7 +1131,6 @@ class VisionMamba(nn.Module):
         hidden_states = x
         if not self.if_bidirectional:
             for layer in self.layers:
-
                 if if_flip_img_sequences and self.if_rope:
                     hidden_states = hidden_states.flip([1])
                     if residual is not None:
@@ -1013,7 +1147,9 @@ class VisionMamba(nn.Module):
                     if residual is not None:
                         residual = residual.flip([1])
 
-                hidden_states, residual = layer(hidden_states, residual, inference_params=inference_params)
+                hidden_states, residual = layer(
+                    hidden_states, residual, inference_params=inference_params
+                )
         else:
             # get two layers in a single for-loop
             for i in range(len(self.layers) // 2):
@@ -1041,7 +1177,9 @@ class VisionMamba(nn.Module):
             hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
         else:
             # Set prenorm=False here since we don't need the residual
-            fused_add_norm_fn = rms_norm_fn if isinstance(self.norm_f, RMSNorm) else layer_norm_fn
+            fused_add_norm_fn = (
+                rms_norm_fn if isinstance(self.norm_f, RMSNorm) else layer_norm_fn
+            )
             hidden_states = fused_add_norm_fn(
                 self.drop_path(hidden_states),
                 self.norm_f.weight,
@@ -1055,7 +1193,10 @@ class VisionMamba(nn.Module):
         # return only cls token if it exists
         if self.if_cls_token:
             if self.use_double_cls_token:
-                return (hidden_states[:, token_position[0], :] + hidden_states[:, token_position[1], :]) / 2
+                return (
+                    hidden_states[:, token_position[0], :]
+                    + hidden_states[:, token_position[1], :]
+                ) / 2
             else:
                 if self.use_middle_cls_token:
                     return hidden_states[:, token_position, :]
@@ -1098,7 +1239,9 @@ class VisionMamba(nn.Module):
 
 
 @register_model
-def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_div2(pretrained=False, **kwargs):
+def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_div2(
+    pretrained=False, **kwargs
+):
     model = VisionMamba(
         patch_size=16,
         embed_dim=192,
@@ -1118,7 +1261,9 @@ def vim_tiny_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
@@ -1147,13 +1292,17 @@ def vim_tiny_patch16_stride8_224_bimambav2_final_pool_mean_abs_pos_embed_with_mi
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
 
 @register_model
-def vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_div2(pretrained=False, **kwargs):
+def vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok_div2(
+    pretrained=False, **kwargs
+):
     model = VisionMamba(
         patch_size=16,
         embed_dim=384,
@@ -1173,7 +1322,9 @@ def vim_small_patch16_224_bimambav2_final_pool_mean_abs_pos_embed_with_midclstok
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
 
@@ -1202,6 +1353,8 @@ def vim_small_patch16_stride8_224_bimambav2_final_pool_mean_abs_pos_embed_with_m
     )
     model.default_cfg = _cfg()
     if pretrained:
-        checkpoint = torch.hub.load_state_dict_from_url(url="to.do", map_location="cpu", check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url="to.do", map_location="cpu", check_hash=True
+        )
         model.load_state_dict(checkpoint["model"])
     return model
