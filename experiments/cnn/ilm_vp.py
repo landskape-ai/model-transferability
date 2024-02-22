@@ -5,11 +5,11 @@ import sys
 from functools import partial
 
 import numpy as np
-import torch
 import timm
-from timm.models import create_model
+import torch
 import torchvision
 from PIL import Image
+from timm.models import create_model
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
@@ -22,13 +22,13 @@ import calibration as cal
 import wandb as wb
 
 sys.path.append("VMamba")
-from classification.models.vmamba import VSSM
 from functools import partial
+
+from classification.models.vmamba import VSSM
 
 from algorithms import generate_label_mapping_by_frequency, get_dist_matrix, label_mapping_base
 from data import IMAGENETCLASSES, IMAGENETNORMALIZE, prepare_expansive_data
-from models import ExpansiveVisualPrompt
-from models import models_mamba
+from models import ExpansiveVisualPrompt, models_mamba
 from tools.mapping_visualization import plot_mapping
 from tools.misc import gen_folder_name, set_seed
 
@@ -36,7 +36,12 @@ from tools.misc import gen_folder_name, set_seed
 
 
 def wandb_setup(args):
-    return wb.init(config=args, name=args.run_name, project="model-transferability", entity="landskape")
+    return wb.init(
+        config=args,
+        name=args.run_name,
+        project="model-transferability",
+        entity="landskape",
+    )
 
 
 if __name__ == "__main__":
@@ -154,7 +159,9 @@ if __name__ == "__main__":
                 img_size=224,
             )
 
-            checkpoint = torch.load("pretrained_models/vim_t_midclstok_76p1acc.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
+            )
 
         else:
             network = create_model(
@@ -167,7 +174,9 @@ if __name__ == "__main__":
                 img_size=224,
             )
 
-            checkpoint = torch.load("pretrained_models/vim_s_midclstok_80p5acc.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_s_midclstok_80p5acc.pth", map_location="cpu"
+            )
 
         checkpoint_model = checkpoint["model"]
         state_dict = network.state_dict()
@@ -202,7 +211,7 @@ if __name__ == "__main__":
         if args.model == "vssm_tiny":
             network = partial(
                 VSSM,
-                patch_size=16,
+                patch_size=4,
                 in_chans=3,
                 num_classes=1000,
                 downsample_version="v1",
@@ -216,12 +225,14 @@ if __name__ == "__main__":
                 drop_path_rate=0.2,
             )()
 
-            checkpoint = torch.load("pretrained_models/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu"
+            )
 
         elif args.model == "vssm_small":
             network = partial(
                 VSSM,
-                patch_size=16,
+                patch_size=4,
                 in_chans=3,
                 num_classes=1000,
                 downsample_version="v1",
@@ -235,12 +246,15 @@ if __name__ == "__main__":
                 drop_path_rate=0.3,
             )()
 
-            checkpoint = torch.load("pretrained_models/vssmsmall_dp03_ckpt_epoch_238.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmsmall_dp03_ckpt_epoch_238.pth",
+                map_location="cpu",
+            )
 
         elif args.model == "vssm_base":
             network = partial(
                 VSSM,
-                patch_size=16,
+                patch_size=4,
                 in_chans=3,
                 num_classes=1000,
                 downsample_version="v1",
@@ -254,7 +268,9 @@ if __name__ == "__main__":
                 drop_path_rate=0.5,
             )()
 
-            checkpoint = torch.load("pretrained_models/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu"
+            )
 
         checkpoint_model = checkpoint["model"]
         state_dict = network.state_dict()
@@ -262,7 +278,6 @@ if __name__ == "__main__":
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
-
         network.load_state_dict(checkpoint_model, strict=False)
     else:
         raise NotImplementedError(f"{args.model} is not supported")

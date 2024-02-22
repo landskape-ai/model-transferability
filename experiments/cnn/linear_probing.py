@@ -2,10 +2,10 @@ import argparse
 import os
 import sys
 
-import torch
 import timm
-from timm.models import create_model
+import torch
 import torchvision
+from timm.models import create_model
 from torch import nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
@@ -18,8 +18,9 @@ import calibration as cal
 import wandb as wb
 
 sys.path.append("VMamba")
-from classification.models.vmamba import VSSM
 from functools import partial
+
+from classification.models.vmamba import VSSM
 
 from data import IMAGENETNORMALIZE, prepare_additive_data
 from models import models_mamba
@@ -29,7 +30,12 @@ from tools.misc import gen_folder_name, set_seed
 
 
 def wandb_setup(args):
-    return wb.init(config=args, name=args.run_name, project="model-transferability", entity="landskape")
+    return wb.init(
+        config=args,
+        name=args.run_name,
+        project="model-transferability",
+        entity="landskape",
+    )
 
 
 if __name__ == "__main__":
@@ -155,7 +161,9 @@ if __name__ == "__main__":
                 img_size=224,
             )
 
-            checkpoint = torch.load("pretrained_models/vim_t_midclstok_76p1acc.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
+            )
 
         else:
             network = create_model(
@@ -168,7 +176,9 @@ if __name__ == "__main__":
                 img_size=224,
             )
 
-            checkpoint = torch.load("pretrained_models/vim_s_midclstok_80p5acc.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_s_midclstok_80p5acc.pth", map_location="cpu"
+            )
 
         checkpoint_model = checkpoint["model"]
         state_dict = network.state_dict()
@@ -217,7 +227,9 @@ if __name__ == "__main__":
                 drop_path_rate=0.2,
             )()
 
-            checkpoint = torch.load("pretrained_models/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmtiny_dp01_ckpt_epoch_292.pth", map_location="cpu"
+            )
 
         elif args.model == "vssm_small":
             network = partial(
@@ -236,7 +248,10 @@ if __name__ == "__main__":
                 drop_path_rate=0.3,
             )()
 
-            checkpoint = torch.load("pretrained_models/vssmsmall_dp03_ckpt_epoch_238.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmsmall_dp03_ckpt_epoch_238.pth",
+                map_location="cpu",
+            )
 
         elif args.model == "vssm_base":
             network = partial(
@@ -255,7 +270,9 @@ if __name__ == "__main__":
                 drop_path_rate=0.5,
             )()
 
-            checkpoint = torch.load("pretrained_models/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu")
+            checkpoint = torch.load(
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vssmbase_dp05_ckpt_epoch_260.pth", map_location="cpu"
+            )
 
         checkpoint_model = checkpoint["model"]
         state_dict = network.state_dict()
@@ -263,6 +280,7 @@ if __name__ == "__main__":
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
+        network.load_state_dict(checkpoint_model)
     else:
         raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
@@ -357,18 +375,18 @@ if __name__ == "__main__":
             wb_logger.log({"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num})
 
         # Save CKPT
-        if args.model in args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
-            fc_dict = network.classifier.head.state_dict()
-        else:
-            fc_dict = network.head.state_dict()
-        state_dict = {
-            "fc_dict": fc_dict,
-            "optimizer_dict": optimizer.state_dict(),
-            "epoch": epoch,
-            "best_acc": best_acc,
-        }
-        if acc > best_acc:
-            best_acc = acc
-            state_dict["best_acc"] = best_acc
-            torch.save(state_dict, os.path.join(save_path, "best.pth"))
-        torch.save(state_dict, os.path.join(save_path, "ckpt.pth"))
+        # if args.model in args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
+        #     fc_dict = network.classifier.head.state_dict()
+        # else:
+        #     fc_dict = network.head.state_dict()
+        # state_dict = {
+        #     "fc_dict": fc_dict,
+        #     "optimizer_dict": optimizer.state_dict(),
+        #     "epoch": epoch,
+        #     "best_acc": best_acc,
+        # }
+        # if acc > best_acc:
+        #     best_acc = acc
+        #     state_dict["best_acc"] = best_acc
+        #     torch.save(state_dict, os.path.join(save_path, "best.pth"))
+        # torch.save(state_dict, os.path.join(save_path, "ckpt.pth"))

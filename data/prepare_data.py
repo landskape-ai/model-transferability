@@ -11,31 +11,32 @@ from torchvision import datasets, transforms
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
+from torch.utils.data import DataLoader, Dataset
+
 from .abide import ABIDE
 from .const import GTSRB_LABEL_MAP, IMAGENETNORMALIZE
 from .dataset_lmdb import COOPLMDBDataset
 
 
-from torch.utils.data import Dataset, DataLoader
-
 # custom dataset class
 class CustomDataset(Dataset):
-    def __init__(self, images, labels= None, transforms = None):
+    def __init__(self, images, labels=None, transforms=None):
         self.labels = labels
         self.images = images
         self.transforms = transforms
-        
+
     def __len__(self):
         return len(self.images)
-    
+
     def __getitem__(self, index):
         data = self.images[index][:]
-        
+
         if self.transforms:
             data = self.transforms(data)
-            
+
         return (data, self.labels[index])
-    
+
+
 def sample_n_shots(args, train_data):
     # Create an empty list to store the sampled indices
     sampled_indices = []
@@ -371,12 +372,11 @@ def prepare_expansive_data(args, dataset, data_path):
             "mask": np.zeros((128, 128)),
         }
     elif dataset == "caltech101":
-        data = np.load(args.caltech_path,allow_pickle=True)
+        data = np.load(args.caltech_path, allow_pickle=True)
         X_train = data["x_train"]
         y_train = data["y_train"]
         X_test = data["x_val"]
         y_test = data["y_val"]
-
 
         preprocess = transforms.Compose(
             [
@@ -387,9 +387,8 @@ def prepare_expansive_data(args, dataset, data_path):
             ]
         )
 
-
         train_data = CustomDataset(X_train, y_train, preprocess)
-        test_data = CustomDataset(X_test, y_test, preprocess) 
+        test_data = CustomDataset(X_test, y_test, preprocess)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
@@ -425,7 +424,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "cifar100":
         train_data = datasets.CIFAR100(
@@ -442,7 +443,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "svhn":
         train_data = datasets.SVHN(
@@ -459,7 +462,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "dtd":
         train_data = datasets.DTD(
@@ -476,7 +481,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "flowers102":
         train_data = datasets.Flowers102(
@@ -493,7 +500,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "eurosat":
         D = datasets.EuroSAT(root=data_path, download=True, transform=preprocess)
@@ -517,7 +526,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "oxfordpets":
         train_data = datasets.OxfordIIITPet(
@@ -534,7 +545,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset in [
         "food101",
@@ -554,7 +567,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=8
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=8),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=8
+            ),
         }
     elif dataset == "gtsrb":
         train_data = datasets.GTSRB(
@@ -571,7 +586,9 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
     elif dataset == "abide":
         D = ABIDE(root=data_path)
@@ -600,17 +617,18 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=2
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=2),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=2
+            ),
         }
         class_names = ["non ASD", "ASD"]
-        
+
     elif dataset == "caltech101":
-        data = np.load(args.caltech_path,allow_pickle=True)
+        data = np.load(args.caltech_path, allow_pickle=True)
         X_train = data["x_train"]
         y_train = data["y_train"]
         X_test = data["x_val"]
         y_test = data["y_val"]
-
 
         # preprocess = transforms.Compose(
         #     [
@@ -620,16 +638,17 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
         #     ]
         # )
 
-
         train_data = CustomDataset(X_train, y_train, preprocess)
-        test_data = CustomDataset(X_test, y_test, preprocess) 
+        test_data = CustomDataset(X_test, y_test, preprocess)
         if args.n_shot > 0:
             train_data = sample_n_shots(args, train_data)
         loaders = {
             "train": DataLoader(
                 train_data, args.batch_size, shuffle=True, num_workers=8
             ),
-            "test": DataLoader(test_data, args.batch_size, shuffle=False, num_workers=8),
+            "test": DataLoader(
+                test_data, args.batch_size, shuffle=False, num_workers=8
+            ),
         }
         class_names = [f"{i}" for i in range(101)]
 
@@ -639,7 +658,7 @@ def prepare_additive_data(args, dataset, data_path, preprocess):
     return loaders, class_names
 
 
-def prepare_gtsrb_fraction_data(data_path, fraction, batch_size,preprocess=None):
+def prepare_gtsrb_fraction_data(data_path, fraction, batch_size, preprocess=None):
     data_path = os.path.join(data_path, "gtsrb")
     assert 0 < fraction <= 1
     new_length = int(fraction * 26640)
