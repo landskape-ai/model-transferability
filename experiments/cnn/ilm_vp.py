@@ -262,6 +262,8 @@ if __name__ == "__main__":
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
+
+        network.load_state_dict(checkpoint_model, strict=False)
     else:
         raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
