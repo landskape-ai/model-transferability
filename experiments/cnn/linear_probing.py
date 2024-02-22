@@ -302,6 +302,7 @@ if __name__ == "__main__":
             ):
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
+        network.load_state_dict(checkpoint_model)
     else:
         raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
