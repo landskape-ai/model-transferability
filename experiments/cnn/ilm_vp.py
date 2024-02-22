@@ -225,7 +225,7 @@ if __name__ == "__main__":
         if args.model == "vssm_tiny":
             network = partial(
                 VSSM,
-                patch_size=16,
+                patch_size=4,
                 in_chans=3,
                 num_classes=1000,
                 downsample_version="v1",
@@ -246,7 +246,7 @@ if __name__ == "__main__":
         elif args.model == "vssm_small":
             network = partial(
                 VSSM,
-                patch_size=16,
+                patch_size=4,
                 in_chans=3,
                 num_classes=1000,
                 downsample_version="v1",
@@ -268,7 +268,7 @@ if __name__ == "__main__":
         elif args.model == "vssm_base":
             network = partial(
                 VSSM,
-                patch_size=16,
+                patch_size=4,
                 in_chans=3,
                 num_classes=1000,
                 downsample_version="v1",
@@ -295,6 +295,7 @@ if __name__ == "__main__":
             ):
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
+        network.load_state_dict(checkpoint_model, strict=False)
     else:
         raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
