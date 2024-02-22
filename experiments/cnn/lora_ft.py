@@ -26,6 +26,8 @@ from data import IMAGENETNORMALIZE, prepare_additive_data
 from models import models_mamba
 from tools.misc import gen_folder_name, set_seed
 
+from peft import LoraConfig, get_peft_model
+
 # from cfg import *
 
 
@@ -34,7 +36,7 @@ def wandb_setup(args):
         config=args,
         name=args.run_name,
         project="model-transferability",
-        entity="landskape",
+        entity="jaygala24",
     )
 
 
@@ -86,6 +88,9 @@ if __name__ == "__main__":
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
     p.add_argument("--batch_size", type=int, default=128)
+    p.add_argument("--lora_rank", type=int, default=8)
+    p.add_argument("--lora_alpha", type=int, default=16)
+    p.add_argument("--lora_dropout", type=float, default=0.1)
     p.add_argument("--caltech_path", type=str, default="/data/caltech101_data.npz")
     args = p.parse_args()
 
@@ -220,7 +225,7 @@ if __name__ == "__main__":
                 patchembed_version="v1",
                 dims=96,
                 depths=[2, 2, 9, 2],
-                mlp_ratio=0.0,
+                mlp_ratio=4.0,
                 ssm_d_state=16,
                 ssm_ratio=2.0,
                 ssm_dt_rank="auto",
@@ -241,7 +246,7 @@ if __name__ == "__main__":
                 patchembed_version="v1",
                 dims=96,
                 depths=[2, 2, 27, 2],
-                mlp_ratio=0.0,
+                mlp_ratio=4.0,
                 ssm_d_state=16,
                 ssm_ratio=2.0,
                 ssm_dt_rank="auto",
@@ -263,7 +268,7 @@ if __name__ == "__main__":
                 patchembed_version="v1",
                 dims=128,
                 depths=[2, 2, 27, 2],
-                mlp_ratio=0.0,
+                mlp_ratio=4.0,
                 ssm_d_state=16,
                 ssm_ratio=2.0,
                 ssm_dt_rank="auto",
@@ -286,19 +291,37 @@ if __name__ == "__main__":
         raise NotImplementedError(f"{args.model} is not supported")
     network.requires_grad_(False)
     network.eval()
+    if args.model in ["vim_tiny", "vim_small", "vssm_tiny", "vssm_small", "vssm_base"]:
+        config = LoraConfig(
+            r=args.lora_rank,
+            lora_alpha=args.lora_alpha,
+            target_modules=["out_proj"],
+            lora_dropout=args.lora_dropout,
+            bias="none"
+        )
+    else:
+        config = LoraConfig(
+            r=args.lora_rank,
+            lora_alpha=args.lora_alpha,
+            target_modules=["qkv"],
+            lora_dropout=args.lora_dropout,
+            bias="none"
+        )
+
+    network = get_peft_model(network, config)
+
     if args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
         network.classifier.head = torch.nn.Linear(network.classifier.head.in_features, len(class_names))
         network.classifier.head.requires_grad_(True)
     else:
         network.head = torch.nn.Linear(network.head.in_features, len(class_names))
         network.head.requires_grad_(True)
+    
+    network.print_trainable_parameters()
     network = network.to(device)
 
     # Optimizer
-    if args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
-        optimizer = torch.optim.Adam(network.classifier.head.parameters(), lr=args.lr)
-    else:
-        optimizer = torch.optim.Adam(network.head.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(network.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[int(0.5 * args.epoch), int(0.72 * args.epoch)], gamma=0.1
     )
@@ -374,20 +397,3 @@ if __name__ == "__main__":
         logger.add_scalar("test/acc", acc, epoch)
         if args.wandb:
             wb_logger.log({"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num})
-
-        # Save CKPT
-        # if args.model in args.model in ["vssm_tiny", "vssm_small", "vssm_base"]:
-        #     fc_dict = network.classifier.head.state_dict()
-        # else:
-        #     fc_dict = network.head.state_dict()
-        # state_dict = {
-        #     "fc_dict": fc_dict,
-        #     "optimizer_dict": optimizer.state_dict(),
-        #     "epoch": epoch,
-        #     "best_acc": best_acc,
-        # }
-        # if acc > best_acc:
-        #     best_acc = acc
-        #     state_dict["best_acc"] = best_acc
-        #     torch.save(state_dict, os.path.join(save_path, "best.pth"))
-        # torch.save(state_dict, os.path.join(save_path, "ckpt.pth"))
