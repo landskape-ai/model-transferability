@@ -21,15 +21,6 @@ from torch import Tensor
 from models.rope import *
 
 try:
-    from mamba_ssm.ops.triton.layernorm import (RMSNorm, layer_norm_fn,
-                                                rms_norm_fn)
-except ImportError:
-    RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
-
-
-
-
-try:
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
 except ImportError:
     causal_conv1d_fn, causal_conv1d_update = None
@@ -125,9 +116,11 @@ def forward(self, hidden_states, inference_params=None):
             )
             # F.linear(rearrange(out_z, "b d l -> b l d"), out_proj_weight, out_proj_bias)
             if not self.if_devide_out:
-                out = F.linear(rearrange(out + out_b.flip([-1]), "b d l -> b l d"), self.out_proj.weight, self.out_proj.bias if hasattr(self.out_proj, "bias") else None)
+                x = rearrange(out + out_b.flip([-1]), "b d l -> b l d")
+                out = self.out_proj(x)
             else:
-                out = F.linear(rearrange(out + out_b.flip([-1]), "b d l -> b l d") / 2, self.out_proj.weight, self.out_proj.bias if hasattr(self.out_proj, "bias") else None)
+                x = rearrange(out + out_b.flip([-1]), "b d l -> b l d") / 2
+                out = self.out_proj(x)
 
         else:
             out = mamba_inner_fn(

@@ -167,7 +167,8 @@ if __name__ == "__main__":
             )
 
             checkpoint = torch.load(
-                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
+                # "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
+                "pretrained_models/vim_t_midclstok_76p1acc.pth", map_location="cpu"
             )
 
         else:
