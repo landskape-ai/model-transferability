@@ -28,7 +28,8 @@ for n_shot in "${n_shots[@]}"; do
             --batch_size $batch_size  \
             --dataset $dataset \
             --results_path results \
-            --wandb --lr 1e-3
+            --wandb --lr 1e-3 \
+            --lora_rank 16
 
     done
 done
