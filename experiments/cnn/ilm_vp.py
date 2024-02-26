@@ -262,16 +262,16 @@ if __name__ == "__main__":
                 {"Test/Test-ACC": acc, "Test/ECE": calibration_error / total_num}
             )
 
-        # Save CKPT
-        state_dict = {
-            "visual_prompt_dict": visual_prompt.state_dict(),
-            "optimizer_dict": optimizer.state_dict(),
-            "epoch": epoch,
-            "best_acc": best_acc,
-            "mapping_sequence": mapping_sequence,
-        }
-        if acc > best_acc:
-            best_acc = acc
-            state_dict["best_acc"] = best_acc
-            torch.save(state_dict, os.path.join(save_path, "best.pth"))
-        torch.save(state_dict, os.path.join(save_path, "ckpt.pth"))
+        # # Save CKPT
+        # state_dict = {
+        #     "visual_prompt_dict": visual_prompt.state_dict(),
+        #     "optimizer_dict": optimizer.state_dict(),
+        #     "epoch": epoch,
+        #     "best_acc": best_acc,
+        #     "mapping_sequence": mapping_sequence,
+        # }
+        # if acc > best_acc:
+        #     best_acc = acc
+        #     state_dict["best_acc"] = best_acc
+        #     torch.save(state_dict, os.path.join(save_path, "best.pth"))
+        # torch.save(state_dict, os.path.join(save_path, "ckpt.pth"))
