@@ -88,11 +88,13 @@ if __name__ == "__main__":
     p.add_argument("--wandb", action="store_true")
     p.add_argument("--run_name", type=str, default="exp")
     p.add_argument("--batch_size", type=int, default=128)
-    p.add_argument("--lora_rank", type=int, default=8)
-    p.add_argument("--lora_alpha", type=int, default=16)
+    p.add_argument("--lora_rank", type=int, default=16)
+    p.add_argument("--lora_alpha", type=int, default=32)
     p.add_argument("--lora_dropout", type=float, default=0.1)
     p.add_argument("--caltech_path", type=str, default="/data/caltech101_data.npz")
     args = p.parse_args()
+    
+    args.lora_alpha = 2 * args.lora_rank
 
     args.run_name = f"{args.model}-{args.dataset}-{args.n_shot}shot-seed{args.seed}-lp"
 
@@ -167,8 +169,7 @@ if __name__ == "__main__":
             )
 
             checkpoint = torch.load(
-                # "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
-                "pretrained_models/vim_t_midclstok_76p1acc.pth", map_location="cpu"
+                "/home/mila/d/diganta.misra/scratch/mamba_weights/vim_t_midclstok_76p1acc.pth", map_location="cpu"
             )
 
         else:
@@ -304,7 +305,7 @@ if __name__ == "__main__":
         config = LoraConfig(
             r=args.lora_rank,
             lora_alpha=args.lora_alpha,
-            target_modules=["qkv"],
+            target_modules=["qkv", "proj", "fc1", "fc2"],
             lora_dropout=args.lora_dropout,
             bias="none"
         )
@@ -323,6 +324,7 @@ if __name__ == "__main__":
 
     # Optimizer
     optimizer = torch.optim.Adam(network.parameters(), lr=args.lr)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch, eta_min=1=)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[int(0.5 * args.epoch), int(0.72 * args.epoch)], gamma=0.1
     )
